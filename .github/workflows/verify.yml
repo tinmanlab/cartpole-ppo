@@ -6,6 +6,8 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  BROWSER_CHANNEL: chrome
 concurrency:
   group: pages-${{ github.ref }}
   cancel-in-progress: true
@@ -29,6 +31,7 @@ jobs:
         run: python tools/package_pages.py --revision "$GITHUB_SHA"
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m playwright install --with-deps chromium
+      - run: google-chrome --version
       - name: Verify real HTTP navigation at a project subpath
         shell: bash
         run: |
@@ -78,6 +81,7 @@ jobs:
           python-version: '3.13'
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m playwright install --with-deps chromium
+      - run: google-chrome --version
       - name: Test the actual Pages URL returned by deployment
         env:
           PAGE_URL: ${{ needs.deploy.outputs.page_url }}

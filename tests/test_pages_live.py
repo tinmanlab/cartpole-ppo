@@ -77,13 +77,25 @@ def run(base, revision, output, wait_seconds):
             check('Walkthrough local link resolves: ' + href, len(fetch(full)) > 0)
 
     with sync_playwright() as pw:
-        executable = os.environ.get('CHROMIUM_PATH')
-        if not executable and Path('/usr/bin/chromium').exists():
+        channel = os.environ.get('BROWSER_CHANNEL')
+        executable = os.environ.get('CHROMIUM_PATH') if not channel else None
+        if not channel and not executable and Path('/usr/bin/chromium').exists():
             executable = '/usr/bin/chromium'
-        browser = pw.chromium.launch(executable_path=executable, headless=True, args=['--no-sandbox'])
+        # The existing walkthrough is H.264. Bundled Chromium and branded
+        # Chrome have different licensed codec sets; record that distinction.
+        codec = '(document.createElement("video")).canPlayType(\'video/mp4; codecs="avc1.640028"\')'
+        if channel == 'chrome':
+            probe = pw.chromium.launch(headless=True, args=['--no-sandbox'])
+            REPORT['bundledChromiumH264'] = probe.new_page().evaluate(codec)
+            probe.close()
+        browser = pw.chromium.launch(channel=channel, executable_path=executable, headless=True, args=['--no-sandbox'])
+        REPORT['browser'] = {'channel': channel or 'chromium', 'version': browser.version}
         context = browser.new_context(viewport={'width': 1600, 'height': 1000}, accept_downloads=True)
         page = context.new_page()
         page.set_default_timeout(30000)
+        REPORT['selectedBrowserH264'] = page.evaluate(codec)
+        print('CODEC', json.dumps({k: REPORT.get(k) for k in ('browser', 'bundledChromiumH264', 'selectedBrowserH264')}), flush=True)
+        check('Test browser supports the supplied H.264 video', bool(REPORT['selectedBrowserH264']))
         page.on('pageerror', lambda e: REPORT['pageErrors'].append(str(e)))
         response = page.goto(base, wait_until='load', timeout=90000)
         check('Browser opens the public URL, not set_content', response.status == 200, page.url)
@@ -151,7 +163,10 @@ def run(base, revision, output, wait_seconds):
             page.wait_for_function('window.PPOStep && PPOStep.status().ready')
             check('Language entry loads: ' + route, status()['language'] == expected)
         page.goto(urljoin(base, 'docs/demo.html'), wait_until='load', timeout=90000)
-        page.wait_for_function('document.querySelector("video").readyState >= 1')
+        page.wait_for_function('document.querySelector("video").readyState >= 1 || document.querySelector("video").error !== null')
+        video_state = page.locator('video').evaluate('(v)=>({readyState:v.readyState,networkState:v.networkState,src:v.currentSrc,error:v.error?{code:v.error.code,message:v.error.message}:null})')
+        REPORT['videoState'] = video_state
+        check('Video decoder reports metadata without an error', video_state['readyState'] >= 1 and video_state['error'] is None, video_state)
         duration = page.locator('video').evaluate('(v)=>v.duration')
         check('Walkthrough metadata decodes in the browser', duration > 45, duration)
         page.locator('video').evaluate('(v)=>{v.muted=true;return v.play();}')
