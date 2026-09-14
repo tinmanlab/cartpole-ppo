@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+evidence/video_raw/
+evidence/*checkpoint.json
+evidence/*progress.json
+evidence/smoke_*.png
+evidence/locale_node_difference.json
+evidence/*.png
+
+evidence/preview_crop.json

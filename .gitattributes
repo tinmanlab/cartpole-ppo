@@ -1,0 +1,17 @@
+* text=auto
+*.js text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.html text eol=lf
+*.png binary
+*.gif binary
+*.mp4 binary
+*.webm binary
+# Historical original must remain byte-identical.
+archive/ko/bam-studio.original.html -text
+# Generated outputs are projections, not separate sources of truth.
+index.html linguist-generated=true
+viewer.ko.html linguist-generated=true
+src/example*.json linguist-generated=true
+src/wheel_data.js linguist-generated=true

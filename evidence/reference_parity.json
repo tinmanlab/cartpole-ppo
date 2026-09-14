@@ -1,0 +1,7 @@
+{
+  "cases": 3000,
+  "sourceCommit": "e9a619d56da5236206f4de6ceec2c1ee1b497b5c",
+  "maxAbsoluteFrictionError": 2.220446049250313e-16,
+  "maxAbsoluteTorqueError": 0.0,
+  "scope": "equations only; no hardware/MuJoCo parity claim"
+}

@@ -1,0 +1,25 @@
+{
+  "passed": 20,
+  "tests": [
+    "Exact upstream parameter blobs match GitHub Git SHAs",
+    "BAM 3 independent identified inertia parameters, no ideal force alias",
+    "Wheel rotational inertia uses URDF rolling axis and two motors",
+    "Speed-up reduces reflected rotor inertia, not wheel inertia",
+    "M6 dry friction opposing motion dissipates rather than adding energy",
+    "Voltage clamp records saturation and does not promise requested force",
+    "No-slip violation is marked a model validity stop",
+    "Trial reset clears previous validity flag",
+    "Nominal sampling leaves all disturbance ranges inactive",
+    "Single-factor curriculum changes only its declared factor family",
+    "Combined profile actually contains force, noisy observations and actuator variations",
+    "Frozen policy inference does not mutate weights or Adam count",
+    "Full BAM checkpoint resumes identical next rollout and optimizer update",
+    "Condition continuation preserves parameters, optimizer and trained provenance until update",
+    "Invalid condition transaction leaves current plant unchanged",
+    "Legacy checkpoints are rejected instead of reinterpreted as BAM",
+    "Uncapped inference can run >500 with the newly trained BAM example",
+    "Explicit failed-step clock does not count stopped simulation time",
+    "Ramp restarts at 25 percent for a continued learning segment",
+    "Self-contained wheel mesh matches its specified outer dimensions"
+  ]
+}

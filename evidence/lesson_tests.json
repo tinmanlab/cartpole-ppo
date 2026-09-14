@@ -1,0 +1,13 @@
+{
+  "pass": 8,
+  "tests": [
+    "Same selected experience drives actor, critic and PPO views",
+    "All 16 neurons: five real products plus bias match tanh activation",
+    "GAE target uses unnormalized advantage, not standardized learning signal",
+    "Every weight Adam calculation matches logged update",
+    "All 243 reverse gradients agree with finite differences on fixed experience",
+    "Missing detail is explicit instead of stale or invented values",
+    "One manual pulse is time-bounded and adds to force without teleportation",
+    "Policy validation refuses malformed model before usage"
+  ]
+}

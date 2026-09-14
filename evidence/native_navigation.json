@@ -1,0 +1,5 @@
+{
+  "test": "native-file-navigation",
+  "loaded": false,
+  "error": "Page.goto: net::ERR_BLOCKED_BY_ADMINISTRATOR at file:///mnt/data/cartpole_PPO/index.html\nCall log:\n  - navigating to \"file:///mnt/data/cartpole_PPO/index.html\", waiting until \"load\"\n"
+}

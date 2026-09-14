@@ -1,0 +1,195 @@
+{
+  "tests": [
+    {
+      "name": "Main entry starts in English",
+      "passed": true
+    },
+    {
+      "name": "Pause actually holds live physics",
+      "passed": true
+    },
+    {
+      "name": "Korean switch preserves weights, physics, clocks, RNG and selected record",
+      "passed": true
+    },
+    {
+      "name": "Korean interface renders Korean labels",
+      "passed": true
+    },
+    {
+      "name": "Round trip to English preserves all numerical state",
+      "passed": true
+    },
+    {
+      "name": "Chapter 1: no untranslated visible Korean in English",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "Chapter 2: no untranslated visible Korean in English",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "Chapter 3: no untranslated visible Korean in English",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "Chapter 4: no untranslated visible Korean in English",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "Chapter 5: no untranslated visible Korean in English",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "One main CartPole canvas, no duplicate before/after simulation",
+      "passed": true
+    },
+    {
+      "name": "Selected sample, neuron and recorded gradients survive translation",
+      "passed": true
+    },
+    {
+      "name": "Inactive disturbance fields are disabled; base physics remains editable",
+      "passed": true
+    },
+    {
+      "name": "Selecting pushes enables only its factor fields",
+      "passed": true
+    },
+    {
+      "name": "Locale refresh preserves unapplied physical and reward drafts",
+      "passed": true
+    },
+    {
+      "name": "Draft locale refresh does not apply draft to physics or learner",
+      "passed": true
+    },
+    {
+      "name": "Explicit test-only applies reward and physical fields, not training",
+      "passed": true
+    },
+    {
+      "name": "Held-out evaluation leaves the actual policy unchanged",
+      "passed": true
+    },
+    {
+      "name": "Evaluation renders exposure and model-invalid counts",
+      "passed": true
+    },
+    {
+      "name": "Evaluation labels translate from semantic keys",
+      "passed": true
+    },
+    {
+      "name": "JSON records actual requested/delivered impulse and pulse completion",
+      "passed": true
+    },
+    {
+      "name": "Unreached pulses cannot report completed or recovered",
+      "passed": true
+    },
+    {
+      "name": "PPO after in-flight translation agrees with Node within floating-point roundoff",
+      "passed": true,
+      "detail": {
+        "maxAbsoluteDifference": 1.1102230246251565e-16,
+        "tolerance": 1e-12
+      }
+    },
+    {
+      "name": "Learning still renders the experiment chapter after switching language",
+      "passed": true
+    },
+    {
+      "name": "Korean entry initializes in Korean from the same engine",
+      "passed": true
+    },
+    {
+      "name": "Korean entry can switch back to English",
+      "passed": true
+    },
+    {
+      "name": "English desktop 1280: no horizontal overflow",
+      "passed": true
+    },
+    {
+      "name": "English desktop 1440: no horizontal overflow",
+      "passed": true
+    },
+    {
+      "name": "English desktop 1920: no horizontal overflow",
+      "passed": true
+    },
+    {
+      "name": "No uncaught JavaScript exceptions",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "No external runtime requests",
+      "passed": true,
+      "detail": []
+    }
+  ],
+  "errors": [],
+  "requests": [],
+  "artifactSHA256": "f0365d2549ea27169f94717dab10467560315ace86347e0c0bd5cb999108d021",
+  "heldOut": [
+    {
+      "name": "nominal",
+      "passed": 12,
+      "mean": 500,
+      "reachedPulse": 0,
+      "completedPulse": 0,
+      "invalid": 0,
+      "failureCounts": {
+        "pass": 12
+      }
+    },
+    {
+      "name": "mixed",
+      "passed": 10,
+      "mean": 433.25,
+      "reachedPulse": 0,
+      "completedPulse": 0,
+      "invalid": 1,
+      "failureCounts": {
+        "pass": 10,
+        "model_invalid": 1,
+        "pole_angle": 1
+      }
+    },
+    {
+      "name": "pulse12",
+      "passed": 1,
+      "mean": 201.16666666666666,
+      "reachedPulse": 12,
+      "completedPulse": 5,
+      "invalid": 7,
+      "failureCounts": {
+        "model_invalid": 7,
+        "pole_angle": 4,
+        "pass": 1
+      }
+    },
+    {
+      "name": "ood",
+      "passed": 10,
+      "mean": 432.75,
+      "reachedPulse": 0,
+      "completedPulse": 0,
+      "invalid": 1,
+      "failureCounts": {
+        "pass": 10,
+        "model_invalid": 1,
+        "pole_angle": 1
+      }
+    }
+  ],
+  "passed": 31
+}

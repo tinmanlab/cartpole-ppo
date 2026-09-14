@@ -1,0 +1,257 @@
+{
+  "artifactSHA256": "f0365d2549ea27169f94717dab10467560315ace86347e0c0bd5cb999108d021",
+  "load": "Chromium set_content exact offline bytes",
+  "tests": [
+    {
+      "name": "New own learner remains random despite showing trained example",
+      "passed": true
+    },
+    {
+      "name": "BAM XL330 is the actual default for both training and test",
+      "passed": true
+    },
+    {
+      "name": "Draft edits never change either running environment",
+      "passed": true
+    },
+    {
+      "name": "Test-only applies real motor and mass without retraining",
+      "passed": true
+    },
+    {
+      "name": "Policy/test mismatch remains explicit",
+      "passed": true
+    },
+    {
+      "name": "New training conditions are separate from current test conditions",
+      "passed": true
+    },
+    {
+      "name": "Worker collected and optimized on selected MX106 BAM plant",
+      "passed": true
+    },
+    {
+      "name": "Staged curriculum starts nominal rather than enabling all noise at once",
+      "passed": true
+    },
+    {
+      "name": "Continuation retains old policy and Adam until the next update",
+      "passed": true
+    },
+    {
+      "name": "Next rollout uses new conditions and continuous Adam count",
+      "passed": true
+    },
+    {
+      "name": "Both networks display all actual 32 hidden activations",
+      "passed": true
+    },
+    {
+      "name": "Signed weights are data encoded rather than uniform gray",
+      "passed": true
+    },
+    {
+      "name": "Different real experience changes numeric neural activations",
+      "passed": true
+    },
+    {
+      "name": "Delta mode displays actual last minibatch weight change",
+      "passed": true,
+      "detail": -0.0003150407079703932
+    },
+    {
+      "name": "Live network view advances true inference without extra optimization",
+      "passed": true
+    },
+    {
+      "name": "Selected neuron expands inline arithmetic",
+      "passed": true
+    },
+    {
+      "name": "Chapter 1 renders without missing panels",
+      "passed": true
+    },
+    {
+      "name": "Chapter 2 renders without missing panels",
+      "passed": true
+    },
+    {
+      "name": "Chapter 3 renders without missing panels",
+      "passed": true
+    },
+    {
+      "name": "Chapter 4 renders without missing panels",
+      "passed": true
+    },
+    {
+      "name": "Chapter 5 renders without missing panels",
+      "passed": true
+    },
+    {
+      "name": "New real Worker training improves survival over the random policy",
+      "passed": true,
+      "detail": {
+        "seed": 123,
+        "iterations": 120,
+        "result": {
+          "mean": 500,
+          "passed": 12,
+          "tailError": 0.12193023821827291
+        },
+        "seconds": 28.726425410000047,
+        "wall": 28.798799999999584,
+        "sim": 28.799999999999468,
+        "RT": 1.0000416684028461,
+        "actorAdamSteps": 7680,
+        "motor": "xl330"
+      }
+    },
+    {
+      "name": "New learner uses 120 real PPO iterations and 7680 Adam steps",
+      "passed": true
+    },
+    {
+      "name": "Active physical time remains within 40ms of elapsed time during training",
+      "passed": true,
+      "detail": {
+        "wall": 28.798799999999584,
+        "sim": 28.799999999999468,
+        "rt": 1.0000416684028461
+      }
+    },
+    {
+      "name": "Learning completion freezes the final own policy",
+      "passed": true
+    },
+    {
+      "name": "Final frozen policy continues past 500 without reset",
+      "passed": true,
+      "detail": 576
+    },
+    {
+      "name": "Manual push is actual time-bounded external force",
+      "passed": true
+    },
+    {
+      "name": "Pulse expires after its specified duration",
+      "passed": true
+    },
+    {
+      "name": "Replay loads the real stored trajectory",
+      "passed": true
+    },
+    {
+      "name": "Replay single step works in both directions",
+      "passed": true
+    },
+    {
+      "name": "Independent validation runs all four conditions",
+      "passed": true
+    },
+    {
+      "name": "Downloaded checkpoint binds BAM spec and optimizer state",
+      "passed": true
+    },
+    {
+      "name": "Checkpoint restore keeps iteration and actuator",
+      "passed": true
+    },
+    {
+      "name": "Legacy or malformed checkpoint rejected without resetting learner",
+      "passed": true
+    },
+    {
+      "name": "Desktop 1280 has no horizontal overflow",
+      "passed": true
+    },
+    {
+      "name": "Desktop 1440 has no horizontal overflow",
+      "passed": true
+    },
+    {
+      "name": "Desktop 1920 has no horizontal overflow",
+      "passed": true
+    },
+    {
+      "name": "Entire interaction run has no uncaught JavaScript errors",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "Entire artifact remains offline without remote runtime requests",
+      "passed": true,
+      "detail": []
+    }
+  ],
+  "errors": [],
+  "requests": [],
+  "browser": "144.0.7559.96",
+  "actualTraining": {
+    "seed": 123,
+    "iterations": 120,
+    "result": {
+      "mean": 500,
+      "passed": 12,
+      "tailError": 0.12193023821827291
+    },
+    "seconds": 28.726425410000047,
+    "wall": 28.798799999999584,
+    "sim": 28.799999999999468,
+    "RT": 1.0000416684028461,
+    "actorAdamSteps": 7680,
+    "motor": "xl330"
+  },
+  "independentEvaluation": [
+    {
+      "name": "nominal",
+      "passed": 12,
+      "mean": 500,
+      "reachedPulse": 0,
+      "completedPulse": 0,
+      "invalid": 0,
+      "failureCounts": {
+        "pass": 12
+      }
+    },
+    {
+      "name": "mixed",
+      "passed": 10,
+      "mean": 446.0833333333333,
+      "reachedPulse": 0,
+      "completedPulse": 0,
+      "invalid": 1,
+      "failureCounts": {
+        "pass": 10,
+        "model_invalid": 1,
+        "pole_angle": 1
+      }
+    },
+    {
+      "name": "pulse12",
+      "passed": 1,
+      "mean": 196,
+      "reachedPulse": 12,
+      "completedPulse": 5,
+      "invalid": 7,
+      "failureCounts": {
+        "model_invalid": 7,
+        "pole_angle": 4,
+        "pass": 1
+      }
+    },
+    {
+      "name": "ood",
+      "passed": 10,
+      "mean": 432.4166666666667,
+      "reachedPulse": 0,
+      "completedPulse": 0,
+      "invalid": 1,
+      "failureCounts": {
+        "pass": 10,
+        "model_invalid": 1,
+        "pole_angle": 1
+      }
+    }
+  ],
+  "passed": 39
+}

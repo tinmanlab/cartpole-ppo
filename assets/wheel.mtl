@@ -1,0 +1,8 @@
+newmtl tire
+Kd 0.12 0.15 0.18
+newmtl rim
+Kd 0.62 0.68 0.73
+newmtl hub
+Kd 0.35 0.43 0.50
+newmtl tread
+Kd 0.22 0.25 0.28

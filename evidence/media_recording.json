@@ -1,0 +1,278 @@
+{
+  "sourceHTML_SHA256": "f0365d2549ea27169f94717dab10467560315ace86347e0c0bd5cb999108d021",
+  "capture": "Real Chromium viewport recording; set_content loaded exact standalone HTML bytes. Editorial captions only. No metric mocks, physics speed changes or hidden control law.",
+  "chapterCaptions": [
+    {
+      "start": 0.0,
+      "text": "A trained example is running. Your own learner is still random."
+    },
+    {
+      "start": 6.021,
+      "text": "Move the target. The network commands the BAM drive—not the cart position."
+    },
+    {
+      "start": 12.054,
+      "text": "A real 4 N × 0.20 s push. Test exposure does not train the policy."
+    },
+    {
+      "start": 17.225,
+      "text": "English and Korean share one engine. Switching language keeps state."
+    },
+    {
+      "start": 21.422,
+      "text": "Freeze one recorded experience. Click a neuron and see its actual arithmetic."
+    },
+    {
+      "start": 27.719,
+      "text": "Products + bias → tanh. Changing an input is not the same as learning."
+    },
+    {
+      "start": 30.783,
+      "text": "Δw / Δh shows the saved minibatch update, not an animation of improvement."
+    },
+    {
+      "start": 34.907,
+      "text": "Reward scores the task. GAE estimates a learning signal—not the true future."
+    },
+    {
+      "start": 39.073,
+      "text": "Backpropagation: which weights contributed to this sample’s loss?"
+    },
+    {
+      "start": 42.125,
+      "text": "128 gradients are averaged. Adam uses their history to change each weight."
+    },
+    {
+      "start": 46.29,
+      "text": "Keep the input fixed. Read the actual action-probability change."
+    },
+    {
+      "start": 49.376,
+      "text": "Change a cost or physical condition—then choose where it applies."
+    },
+    {
+      "start": 54.594,
+      "text": "Now train a separate, random policy. Progress comes from real PPO updates."
+    },
+    {
+      "start": 59.423,
+      "text": "This short run is complete. Freeze the weights and test—do not infer success from loss."
+    },
+    {
+      "start": 62.729,
+      "text": "Held-out tests freeze this example policy. Count exposure and invalid-model stops."
+    },
+    {
+      "start": 68.028,
+      "text": "No hidden PID. No invented learning curve. One local lab, two languages."
+    }
+  ],
+  "previewCrop": {
+    "x": 24,
+    "y": 292.328125,
+    "width": 646.53125,
+    "height": 543.765625
+  },
+  "scriptRunSeconds": 71.05267151699991,
+  "pageErrors": [],
+  "remoteRequests": [],
+  "lastState": {
+    "language": "en",
+    "physicsVersion": "planar-bam/2",
+    "trainingPlant": {
+      "actuator": "xl330",
+      "ratio": 2,
+      "force": 8,
+      "mc": 1,
+      "mp": 0.1,
+      "l": 0.5,
+      "gravity": 9.8,
+      "mu": 1.2,
+      "modelSpread": 0.2,
+      "wind": 1,
+      "push": 6,
+      "pushMin": 0.1,
+      "pushMax": 0.24,
+      "pushPeriod": 2.2,
+      "noise": 1,
+      "delay": 0.02,
+      "lag": 0.02,
+      "gainSpread": 0.15,
+      "friction": 0.1,
+      "rewardPosition": 0.5,
+      "rewardVelocity": 0.02,
+      "rewardAngle": 0.05
+    },
+    "testPlant": {
+      "actuator": "xl330",
+      "ratio": 2,
+      "force": 8,
+      "mc": 1,
+      "mp": 0.1,
+      "l": 0.5,
+      "gravity": 9.8,
+      "mu": 1.2,
+      "modelSpread": 0.2,
+      "wind": 1,
+      "push": 6,
+      "pushMin": 0.1,
+      "pushMax": 0.24,
+      "pushPeriod": 2.2,
+      "noise": 1,
+      "delay": 0.02,
+      "lag": 0.02,
+      "gainSpread": 0.15,
+      "friction": 0.1,
+      "rewardPosition": 0.5,
+      "rewardVelocity": 0.02,
+      "rewardAngle": 0.05
+    },
+    "trainingPlan": "fixed",
+    "curriculum": {
+      "plan": "fixed",
+      "index": 0,
+      "streak": 0,
+      "last": null,
+      "history": [],
+      "phaseStart": 0
+    },
+    "drive": {
+      "voltage": 1.909093276355984,
+      "current": 0.6605983857920226,
+      "motorTorque": 0.22854983366972417,
+      "externalTorque": 5.253203072434945e-05,
+      "rotorSpeed": 0.7409656871493222,
+      "rotorInertia": 0.001573222677933975,
+      "reflectedMass": 0.7603640541478305,
+      "frictionBudget": 0.06619796413838652,
+      "frictionTorque": 0.06619796413838652,
+      "viscousTorque": 0.0042890391668710835,
+      "motorForce": 6.925752535446187,
+      "contactForce": 2.7491970644346475,
+      "normalForce": 10.779533963400542,
+      "tractionLimit": 12.93544075608065,
+      "contactLost": false,
+      "tractionRatio": 0.21253215226874383,
+      "saturated": false,
+      "acc": 2.6836956096898676,
+      "alpha": -4.0573727954577885,
+      "wheelAngle": 13.402735176285125,
+      "rotorAngle": 6.7013675881425625,
+      "peakTractionRatio": 0.24781064255513555
+    },
+    "netMode": "delta",
+    "netLive": false,
+    "chapter": 5,
+    "source": "example",
+    "record": 240,
+    "sample": 4,
+    "sampleID": 1520,
+    "kind": "actor",
+    "neuron": 0,
+    "weight": 2,
+    "forward": 2,
+    "update": 4,
+    "calcPlaying": false,
+    "ready": true,
+    "busy": false,
+    "running": false,
+    "latestIteration": 20,
+    "trainingProfile": "nominal",
+    "appliedIteration": 240,
+    "appliedSource": "example",
+    "followPolicy": false,
+    "mode": "live",
+    "paused": false,
+    "liveStep": 616,
+    "liveState": [
+      0.44229026081740913,
+      0.04890373535185527,
+      -0.0021519253027781475,
+      0.002796545459062376
+    ],
+    "liveGoal": 0.6,
+    "liveTerminated": false,
+    "liveTruncated": false,
+    "physicsSteps": 1912,
+    "manualSteps": 0,
+    "clockSteps": 1912,
+    "wall": 38.24839999999984,
+    "sim": 38.24000000000038,
+    "rt": 0.9997803829702822,
+    "debt": 0.0083999999999935,
+    "resets": 4,
+    "pulseSteps": 0,
+    "userForce": 0,
+    "autoReset": true,
+    "timeCap": false,
+    "replayAt": 0,
+    "replayPlaying": false,
+    "evaluation": {
+      "mean": 427.5,
+      "passed": 2,
+      "tailError": 0.6278198651109784
+    },
+    "evalBusy": false,
+    "evalPolicy": "Nominal example I.240",
+    "evalRows": [
+      {
+        "name": "nominal",
+        "passed": 12,
+        "mean": 500,
+        "reachedPulse": 0,
+        "completedPulse": 0,
+        "invalid": 0,
+        "failureCounts": {
+          "pass": 12
+        }
+      },
+      {
+        "name": "mixed",
+        "passed": 10,
+        "mean": 433.25,
+        "reachedPulse": 0,
+        "completedPulse": 0,
+        "invalid": 1,
+        "failureCounts": {
+          "pass": 10,
+          "model_invalid": 1,
+          "pole_angle": 1
+        }
+      },
+      {
+        "name": "pulse12",
+        "passed": 1,
+        "mean": 201.16666666666666,
+        "reachedPulse": 12,
+        "completedPulse": 5,
+        "invalid": 7,
+        "failureCounts": {
+          "model_invalid": 7,
+          "pole_angle": 4,
+          "pass": 1
+        }
+      },
+      {
+        "name": "ood",
+        "passed": 10,
+        "mean": 432.75,
+        "reachedPulse": 0,
+        "completedPulse": 0,
+        "invalid": 1,
+        "failureCounts": {
+          "pass": 10,
+          "model_invalid": 1,
+          "pole_angle": 1
+        }
+      }
+    ],
+    "records": 21
+  },
+  "media": {
+    "duration": 73.52,
+    "codec": "h264",
+    "width": 1600,
+    "height": 1000,
+    "bytes": 4940114
+  }
+}
