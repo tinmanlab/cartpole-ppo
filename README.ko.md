@@ -2,13 +2,15 @@
 
 **카트가 균형을 잡는 모습을 보고, 실제 경험 하나가 가중치 수정으로 이어지는 과정을 따라갑니다.**
 
-브라우저에서 실제 물리와 PPO 학습이 실행되는 한·영 교육용 실험실입니다. 서버·GPU·계정·실행 중 다운로드가 필요하지 않습니다.
+브라우저에서 실제 물리와 PPO 학습이 실행되는 한·영 교육용 실험실입니다. 별도 설치·GPU·계정 없이 아래 링크에서 실행합니다.
 
-[![실제 브라우저 사용 영상](docs/media/demo.gif)](docs/media/walkthrough.mp4)
+**[실시간 시뮬레이션 실행 →](https://tinmanlab.github.io/cartpole_PPO/index.html?lang=ko)** · **[English simulation](https://tinmanlab.github.io/cartpole_PPO/?lang=en)** · **[사용 영상](https://tinmanlab.github.io/cartpole_PPO/docs/demo.html)**
 
-**[사용 영상](docs/demo.html)** · **[한국어 viewer](viewer.ko.html)** · **[English](README.md)**
+[![실제 브라우저 사용 영상](docs/media/demo.gif)](https://tinmanlab.github.io/cartpole_PPO/docs/demo.html)
 
-> 저장소를 내려받아 **`index.html`**을 데스크톱 브라우저에서 여세요. GitHub의 소스 파일 화면 자체는 실행 중인 앱이 아닙니다. 영문 화면의 **Language**에서 한국어로 전환해도 학습기·가중치·시뮬레이션 상태는 유지됩니다. `viewer.ko.html`은 한국어로 시작하는 같은 프로그램입니다.
+[English guide](README.md) · [모델·한계](docs/MODEL.md) · [배포·실제 접속 검사](docs/PAGES.md)
+
+> **온라인:** 위 실행 링크는 코드 미리보기가 아닌 실제 앱을 엽니다. **오프라인:** 저장소를 내려받아 `index.html`을 데스크톱 브라우저에서 여세요. **Language**에서 언어를 바꿔도 학습기·가중치·시뮬레이션 상태는 유지됩니다. `viewer.ko.html`은 한국어로 시작하는 같은 프로그램입니다.
 
 ## 무엇을 할 수 있나요?
 

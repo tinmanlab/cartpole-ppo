@@ -8,6 +8,7 @@ import hashlib
 from html.parser import HTMLParser
 import json
 import os
+import re
 from pathlib import Path
 import time
 import traceback
@@ -60,6 +61,19 @@ def run(base, revision, output, wait_seconds):
     for name in ('index.html', 'viewer.ko.html', 'docs/demo.html', 'docs/media/hero.png', 'docs/media/demo.gif', 'docs/media/walkthrough.mp4', 'archive/ko/bam-studio.original.html'):
         data = body if name == 'index.html' else fetch(urljoin(base, name))
         check('HTTP bytes match manifest: ' + name, hashlib.sha256(data).hexdigest() == manifest['files'][name]['sha256'])
+
+    # README shortcuts must serve the expected file, not a source-code preview
+    # or an unrelated HTTP-200 page. Local staging skips public-host links;
+    # the post-deployment run verifies them at the actual Pages host.
+    shortcuts = set()
+    for readme in ('README.md', 'README.ko.md'):
+        text = fetch(urljoin(base, readme)).decode()
+        shortcuts.update(url for url in re.findall(r'\]\((https?://[^)]+)\)', text) if url.startswith(base))
+    for url in sorted(shortcuts):
+        relative = urlparse(url).path[len(urlparse(base).path):] or 'index.html'
+        data = fetch(url)
+        check('README shortcut opens deployed content: ' + url,
+              relative in manifest['files'] and hashlib.sha256(data).hexdigest() == manifest['files'][relative]['sha256'])
 
     class Links(HTMLParser):
         def __init__(self):

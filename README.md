@@ -2,13 +2,15 @@
 
 **Watch a policy balance a pole. Follow one real decision all the way to a weight update.**
 
-A local, bilingual reinforcement-learning lab: real CartPole physics, real PPO learning in a Web Worker, and inspectable Actor/Critic arithmetic. No server, GPU, account, or runtime download.
+A bilingual reinforcement-learning lab that runs in your browser: real CartPole physics, real PPO learning in a Web Worker, and inspectable Actor/Critic arithmetic. No GPU, account, or backend service is required.
 
-[![Watch the actual browser walkthrough](docs/media/demo.gif)](docs/media/walkthrough.mp4)
+**[Open interactive simulation →](https://tinmanlab.github.io/cartpole_PPO/?lang=en)** · **[한국어로 실행](https://tinmanlab.github.io/cartpole_PPO/index.html?lang=ko)** · **[Watch the walkthrough](https://tinmanlab.github.io/cartpole_PPO/docs/demo.html)**
 
-**[Watch the walkthrough](docs/demo.html)** · **[English viewer](index.html)** · **[한국어](README.ko.md)** · [Model & limits](docs/MODEL.md)
+[![Watch the actual browser walkthrough](docs/media/demo.gif)](https://tinmanlab.github.io/cartpole_PPO/docs/demo.html)
 
-> Download this repository and open **`index.html`** in a desktop browser. GitHub's source-file page is not the running app. The viewer starts in English; change **Language** without restarting the simulation or learner. `viewer.ko.html` starts in Korean.
+[한국어 안내](README.ko.md) · [Model & limits](docs/MODEL.md) · [Hosting and live checks](docs/PAGES.md)
+
+> **Online:** use the simulation link above; it opens the running app, not GitHub’s source preview. **Offline:** download this repository and open `index.html` in a desktop browser. Change **Language** without restarting the simulation or learner. `viewer.ko.html` starts in Korean.
 
 ## Three ways to use it
 
