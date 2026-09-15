@@ -36,13 +36,14 @@ def catalog() -> str:
 
 
 def build(language: str = 'en') -> str:
-    extension = '\n'.join(read(name) for name in ('extension.js', 'locale_refresh.js', 'ui_extra.js', 'interaction.js'))
+    robust_extension = 'const ROBUST_WORKER_SOURCE = ' + json.dumps(read('robust_worker.js'), ensure_ascii=False) + ';\n' + read('robust_ui.js')
+    extension = '\n'.join(read(name) for name in ('extension.js', 'locale_refresh.js', 'ui_extra.js', 'interaction.js')) + '\n' + robust_extension
     if read('app.js').count('/* EXTENSION */') != 1:
         raise ValueError('The app must have exactly one extension slot.')
     parts = {
         'STYLE': read('style.css') + '\n' + read('interaction.css'),
         'I18N': catalog() + read('i18n.js') + '\n' + read('locale_boot.js'),
-        'CORE': '\n'.join(read(name) for name in ('bam_params.js', 'plant.js', 'core.js')),
+        'CORE': '\n'.join(read(name) for name in ('bam_params.js', 'plant.js', 'core.js', 'robust_v2.js')),
         'LESSON': read('lesson.js'), 'WORKER': read('worker.js'),
         'EXAMPLE': read('example.json').replace('</', '<\\/'),
         'ROBUST': read('example_robust.json').replace('</', '<\\/'),
