@@ -56,6 +56,32 @@ jobs:
         uses: actions/upload-pages-artifact@v4
         with:
           path: _site
+  robust-experiment:
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    needs: engine-and-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run fixed-budget three-seed qualification
+        run: node tools/evaluate_robust_v2.js
+      - name: Print qualification summary
+        if: always()
+        run: |
+          if [ -f evidence/robust_v2_experiment.json ]; then
+            node -e "const r=require('./evidence/robust_v2_experiment.json'); console.log(JSON.stringify({acceptance:r.acceptance,nominal:r.aggregate.nominal,mixed35:r.aggregate.mixed35,bestInRange:r.aggregate.bestInRange},null,2));"
+          fi
+      - name: Upload full robustness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: robust-v2-experiment-${{ github.sha }}
+          path: evidence/robust_v2_experiment.json
+          if-no-files-found: error
+          retention-days: 30
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: engine-and-build
