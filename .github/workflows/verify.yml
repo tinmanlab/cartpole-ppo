@@ -34,7 +34,7 @@ jobs:
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m playwright install --with-deps chromium
       - run: google-chrome --version
-      - name: Verify actual HTTP navigation and held-tip input
+      - name: Verify actual HTTP navigation, held-tip input, and Robust PPO v2
         shell: bash
         run: |
           python -m http.server 8765 --bind 127.0.0.1 > "$RUNNER_TEMP/pages-http.log" 2>&1 &
@@ -42,6 +42,7 @@ jobs:
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
           python tests/test_pages_live.py --base-url http://127.0.0.1:8765/_site/ --expected-revision "$GITHUB_SHA" --wait-seconds 30 --output evidence/local-pages
           python tests/test_tip_browser.py --base-url http://127.0.0.1:8765/_site/ --output evidence/local-pages/tip
+          python tests/test_robust_browser.py --base-url http://127.0.0.1:8765/_site/ --output evidence/local-pages/robust-v2
       - name: Save pre-deployment browser evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -55,6 +56,32 @@ jobs:
         uses: actions/upload-pages-artifact@v4
         with:
           path: _site
+  robust-experiment:
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    needs: engine-and-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run fixed-budget three-seed qualification
+        run: node tools/evaluate_robust_v2.js
+      - name: Print qualification summary
+        if: always()
+        run: |
+          if [ -f evidence/robust_v2_experiment.json ]; then
+            node -e "const r=require('./evidence/robust_v2_experiment.json'); console.log(JSON.stringify({acceptance:r.acceptance,nominal:r.aggregate.nominal,mixed35:r.aggregate.mixed35,bestInRange:r.aggregate.bestInRange},null,2));"
+          fi
+      - name: Upload full robustness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: robust-v2-experiment-${{ github.sha }}
+          path: evidence/robust_v2_experiment.json
+          if-no-files-found: error
+          retention-days: 30
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: engine-and-build
@@ -91,6 +118,7 @@ jobs:
         run: |
           python tests/test_pages_live.py --base-url "$PAGE_URL" --expected-revision "$GITHUB_SHA" --output evidence/public-pages
           python tests/test_tip_browser.py --base-url "$PAGE_URL" --output evidence/public-pages/tip
+          python tests/test_robust_browser.py --base-url "$PAGE_URL" --output evidence/public-pages/robust-v2
       - name: Save public URL verification and screenshots
         if: always()
         uses: actions/upload-artifact@v4

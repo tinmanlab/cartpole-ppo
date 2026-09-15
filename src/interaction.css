@@ -22,3 +22,22 @@
 .force-detail { width:100%; background:white; border:1px solid #dce5ef; border-radius:12px; padding:14px; }
 .force-detail pre { overflow:auto; padding:12px; background:#f5f8fc; font-size:12px; }
 .force-detail .flow-row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.robust-v2 { margin-top:18px; border-top:1px solid #dce5ef; padding-top:12px; }
+.robust-v2 > summary { cursor:pointer; display:flex; justify-content:space-between; gap:16px; align-items:center; font-weight:700; color:#263e57; }
+.robust-v2 > summary span { font-size:11px; font-weight:400; color:var(--muted); text-align:right; }
+.robust-inner { padding:14px 0 4px; }
+.robust-method { padding:11px 12px; border:1px solid #dce5ef; border-radius:9px; background:#f8fafc; display:grid; gap:3px; }
+.robust-method small { color:var(--muted); }
+.robust-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:10px 0; }
+.robust-kpis > div { border:1px solid #dce5ef; border-radius:8px; padding:9px 10px; display:grid; gap:3px; }
+.robust-kpis small { color:var(--muted); }
+.robust-kpis b { font:600 11px ui-monospace,monospace; line-height:1.45; }
+.robust-actions { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0; }
+.robust-load { display:inline-flex; align-items:center; padding:7px 10px; border-radius:7px; cursor:pointer; font-size:12px; }
+.robust-envelope { width:100%; border-collapse:collapse; margin-top:10px; font-size:10px; }
+.robust-envelope th,.robust-envelope td { border:1px solid #dce5ef; padding:6px 5px; text-align:center; }
+.robust-envelope th { background:#f5f8fb; color:#536980; }
+.robust-envelope th small,.robust-envelope td small { display:block; margin-top:2px; color:#7b8998; font-weight:400; }
+.robust-envelope td.good { background:#edf7f1; color:#175e43; }
+.robust-envelope .stress { background:#f6f2eb; color:#7c5c32; }
+@media (max-width:1100px){.robust-kpis{grid-template-columns:1fr}.robust-v2>summary{display:block}.robust-v2>summary span{display:block;text-align:left;margin-top:3px}}
