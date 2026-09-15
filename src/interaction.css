@@ -1,0 +1,24 @@
+/* A small interaction summary, not another dashboard. */
+#recordPicker { font-size:12px; max-width:560px; }
+#recordPicker summary, .condition-details summary { cursor:pointer; color:var(--muted); padding:8px 0; }
+#recordPicker .source-controls { padding:8px 0; }
+.condition-details { margin:0 0 12px; border-bottom:1px solid #dce5ef; }
+.condition-details .conditionbar { margin-bottom:8px; }
+.control-status { padding:9px 12px; font-size:11px; background:#f0f4f8; color:#45576b; border-top:1px solid #dce5ef; }
+.control-status.active { background:#eef7f1; color:#205e45; }
+.control-status.stopped { background:#fff0e7; color:#814416; }
+.hold-button { touch-action:none; user-select:none; }
+.hold-button.held { border-color:#a86b22; background:#fff1df; color:#774006; }
+.hold-button[aria-disabled=true] { opacity:.55; }
+.decision-chain { display:grid; grid-template-columns:1fr 20px 1fr 20px 1fr; align-items:stretch; gap:5px; margin:18px 0; }
+.decision-chain .flow-arrow { align-self:center; }
+.decision-chain strong { font-size:14px; }
+.decision-chain .flow-box { padding:12px; }
+.decision-result { margin:18px 0; border-left:3px solid #7b9ab6; padding:14px; background:#f5f8fc; }
+#decisionResult { font:14px ui-monospace,monospace; padding:8px 0 3px; }
+.causal-lead { line-height:1.65; }
+.input-detail { margin-top:18px; border-top:1px solid #dce5ef; padding-top:12px; }
+.input-detail summary,.force-detail summary { cursor:pointer; color:#47617d; }
+.force-detail { width:100%; background:white; border:1px solid #dce5ef; border-radius:12px; padding:14px; }
+.force-detail pre { overflow:auto; padding:12px; background:#f5f8fc; font-size:12px; }
+.force-detail .flow-row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }

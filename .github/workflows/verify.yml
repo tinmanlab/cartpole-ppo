@@ -24,21 +24,24 @@ jobs:
         with:
           python-version: '3.13'
       - run: node tools/test.js
+      - name: Build both standalone language entries from canonical source
+        run: python src/build.py
       - run: python src/build.py --check
       - run: python tools/check_package.py
       - run: python tests/test_pages.py
-      - name: Stage unchanged standalone viewer and media
+      - name: Stage verified viewer and historical media
         run: python tools/package_pages.py --revision "$GITHUB_SHA"
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m playwright install --with-deps chromium
       - run: google-chrome --version
-      - name: Verify real HTTP navigation at a project subpath
+      - name: Verify actual HTTP navigation and held-tip input
         shell: bash
         run: |
           python -m http.server 8765 --bind 127.0.0.1 > "$RUNNER_TEMP/pages-http.log" 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
           python tests/test_pages_live.py --base-url http://127.0.0.1:8765/_site/ --expected-revision "$GITHUB_SHA" --wait-seconds 30 --output evidence/local-pages
+          python tests/test_tip_browser.py --base-url http://127.0.0.1:8765/_site/ --output evidence/local-pages/tip
       - name: Save pre-deployment browser evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -85,7 +88,9 @@ jobs:
       - name: Test the actual Pages URL returned by deployment
         env:
           PAGE_URL: ${{ needs.deploy.outputs.page_url }}
-        run: python tests/test_pages_live.py --base-url "$PAGE_URL" --expected-revision "$GITHUB_SHA" --output evidence/public-pages
+        run: |
+          python tests/test_pages_live.py --base-url "$PAGE_URL" --expected-revision "$GITHUB_SHA" --output evidence/public-pages
+          python tests/test_tip_browser.py --base-url "$PAGE_URL" --output evidence/public-pages/tip
       - name: Save public URL verification and screenshots
         if: always()
         uses: actions/upload-artifact@v4

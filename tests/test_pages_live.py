@@ -1,15 +1,11 @@
-"""Test actual HTTP-hosted bytes and browser interaction; never mock a route.
-
-Use --base-url from actions/deploy-pages output, not a guessed repository URL.
-The same test can run against a local HTTP server at a repository subpath.
-"""
+"""Verify exact HTTP-hosted bytes and actual browser interaction, never mocked routes."""
 import argparse
 import hashlib
 from html.parser import HTMLParser
 import json
 import os
-import re
 from pathlib import Path
+import re
 import time
 import traceback
 from urllib.parse import urljoin, urlparse
@@ -40,8 +36,6 @@ def run(base, revision, output, wait_seconds):
     if urlparse(base).scheme not in ('http', 'https'):
         raise ValueError('A complete HTTP(S) Pages URL is required.')
     REPORT.update(baseUrl=base, expectedRevision=revision)
-    # Pages can report deployment success before every edge has the new bytes.
-    # Wait for this exact revision, not any successful HTTP response.
     deadline = time.monotonic() + wait_seconds
     while True:
         try:
@@ -58,13 +52,9 @@ def run(base, revision, output, wait_seconds):
             print('Waiting for exact Pages revision:', str(exc), flush=True)
             time.sleep(5)
     check('Public root serves this exact deployed viewer', True, {'revision': revision, 'sha256': hashlib.sha256(body).hexdigest()})
-    for name in ('index.html', 'viewer.ko.html', 'docs/demo.html', 'docs/media/hero.png', 'docs/media/demo.gif', 'docs/media/walkthrough.mp4', 'archive/ko/bam-studio.original.html'):
+    for name in ('index.html', 'viewer.ko.html', 'docs/demo.html', 'docs/media/hero.png', 'docs/media/demo.gif', 'docs/media/walkthrough.mp4', 'archive/ko/bam-studio.original.html', 'archive/en/body-pulse.v2.html'):
         data = body if name == 'index.html' else fetch(urljoin(base, name))
         check('HTTP bytes match manifest: ' + name, hashlib.sha256(data).hexdigest() == manifest['files'][name]['sha256'])
-
-    # README shortcuts must serve the expected file, not a source-code preview
-    # or an unrelated HTTP-200 page. Local staging skips public-host links;
-    # the post-deployment run verifies them at the actual Pages host.
     shortcuts = set()
     for readme in ('README.md', 'README.ko.md'):
         text = fetch(urljoin(base, readme)).decode()
@@ -80,9 +70,7 @@ def run(base, revision, output, wait_seconds):
             super().__init__()
             self.values = []
         def handle_starttag(self, tag, attrs):
-            for key, value in attrs:
-                if key in ('href', 'src', 'poster') and value:
-                    self.values.append(value)
+            self.values += [value for key, value in attrs if key in ('href', 'src', 'poster') and value]
     parser = Links()
     parser.feed(fetch(urljoin(base, 'docs/demo.html')).decode())
     for href in sorted(set(parser.values)):
@@ -95,8 +83,6 @@ def run(base, revision, output, wait_seconds):
         executable = os.environ.get('CHROMIUM_PATH') if not channel else None
         if not channel and not executable and Path('/usr/bin/chromium').exists():
             executable = '/usr/bin/chromium'
-        # The existing walkthrough is H.264. Bundled Chromium and branded
-        # Chrome have different licensed codec sets; record that distinction.
         codec = '(document.createElement("video")).canPlayType(\'video/mp4; codecs="avc1.640028"\')'
         if channel == 'chrome':
             probe = pw.chromium.launch(headless=True, args=['--no-sandbox'])
@@ -104,11 +90,10 @@ def run(base, revision, output, wait_seconds):
             probe.close()
         browser = pw.chromium.launch(channel=channel, executable_path=executable, headless=True, args=['--no-sandbox'])
         REPORT['browser'] = {'channel': channel or 'chromium', 'version': browser.version}
-        context = browser.new_context(viewport={'width': 1600, 'height': 1000}, accept_downloads=True)
+        context = browser.new_context(viewport={'width': 1600, 'height': 1050}, accept_downloads=True)
         page = context.new_page()
         page.set_default_timeout(30000)
         REPORT['selectedBrowserH264'] = page.evaluate(codec)
-        print('CODEC', json.dumps({k: REPORT.get(k) for k in ('browser', 'bundledChromiumH264', 'selectedBrowserH264')}), flush=True)
         check('Test browser supports the supplied H.264 video', bool(REPORT['selectedBrowserH264']))
         page.on('pageerror', lambda e: REPORT['pageErrors'].append(str(e)))
         response = page.goto(base, wait_until='load', timeout=90000)
@@ -117,7 +102,6 @@ def run(base, revision, output, wait_seconds):
         status = lambda: page.evaluate('PPOStep.status()')
         check('Fresh visit defaults to English', status()['language'] == 'en')
         check('Own learner starts random while an example runs', status()['latestIteration'] == 0 and status()['appliedSource'] == 'example')
-        page.click('#dismissGuide')
         page.wait_for_timeout(1200)
         check('Real physics advances in the hosted page', status()['physicsSteps'] > 10)
         if not status()['paused']:
@@ -135,17 +119,20 @@ def run(base, revision, output, wait_seconds):
         check('Target control reaches the real environment', status()['liveGoal'] == 0.4)
         page.click('#targetZero')
         page.click('#resetWorld')
-        page.select_option('#pushForce', '4')
-        page.select_option('#pushDuration', '0.2')
-        page.click('#playWorld')
-        page.click('#pushRight')
-        page.wait_for_function('PPOStep.status().userForce === 4')
-        check('Manual push is applied to live physics', status()['userForce'] == 4)
-        page.wait_for_function('PPOStep.status().pulseSteps === 0')
+        page.select_option('#pushForce', '0.1')
+        if status()['paused']:
+            page.click('#playWorld')
+        button = page.locator('#pushRight').bounding_box()
+        page.mouse.move(button['x'] + button['width']/2, button['y'] + button['height']/2)
+        page.mouse.down()
+        page.wait_for_function('PPOStep.status().tipForce === 0.1')
+        check('Held manual push reaches the pole tip, not the cart body', status()['tipForce'] == .1 and status()['userForce'] == 0)
+        page.mouse.up()
+        page.wait_for_function('PPOStep.status().tipForce === 0')
+        check('Release removes tip force without a synthetic pulse', status()['heldForce'] == 0)
         if not status()['paused']:
             page.click('#playWorld')
         page.screenshot(path=str(output / 'live.png'))
-
         sample_id = None
         for chapter in (2, 3, 4):
             page.click(f'[data-chapter="{chapter}"]')
@@ -163,20 +150,19 @@ def run(base, revision, output, wait_seconds):
         page.wait_for_function('PPOStep.status().latestIteration === 1 && !PPOStep.status().busy', timeout=90000)
         update = page.evaluate('(()=>{const r=PPOStep.record(1);return {samples:r.envSteps,adam:r.policy.actor.t,changed:r.policy.actor.p.some((v,i)=>v!==r.before.actor.p[i]),grad:r.stats.actorGrad};})()')
         check('Hosted Worker collects 2048 experiences and performs 64 real Adam updates', update['samples'] == 2048 and update['adam'] == 64 and update['changed'] and update['grad'] > 0, update)
-        page.click('#recordedReplay')
-        page.click('#replayNext')
+        page.click('#recordedReplay');page.click('#replayNext')
         check('Recorded replay moves forward', status()['replayAt'] == 1)
         page.click('#replayBack')
         check('Recorded replay moves backward', status()['replayAt'] == 0)
         page.click('#leaveReplay')
         check('Live mode can be restored after replay', status()['mode'] == 'live')
         REPORT['runtime'] = {k: status()[k] for k in ('latestIteration', 'physicsSteps', 'rt', 'wall', 'sim', 'language')}
-
         for route, expected in (('index.html?lang=ko', 'ko'), ('viewer.ko.html', 'ko'), ('?lang=en', 'en')):
             page.goto(urljoin(base, route), wait_until='load', timeout=90000)
             page.wait_for_function('window.PPOStep && PPOStep.status().ready')
             check('Language entry loads: ' + route, status()['language'] == expected)
         page.goto(urljoin(base, 'docs/demo.html'), wait_until='load', timeout=90000)
+        check('Historical video is explicitly identified', 'Earlier version' in page.locator('body').inner_text())
         page.wait_for_function('document.querySelector("video").readyState >= 1 || document.querySelector("video").error !== null')
         video_state = page.locator('video').evaluate('(v)=>({readyState:v.readyState,networkState:v.networkState,src:v.currentSrc,error:v.error?{code:v.error.code,message:v.error.message}:null})')
         REPORT['videoState'] = video_state
@@ -186,14 +172,12 @@ def run(base, revision, output, wait_seconds):
         page.locator('video').evaluate('(v)=>{v.muted=true;return v.play();}')
         page.wait_for_function('document.querySelector("video").currentTime > 0.3')
         check('Walkthrough video actually plays', page.locator('video').evaluate('(v)=>!v.paused && v.currentTime > 0.3'))
-        page.locator('video').evaluate('(v)=>v.pause()')
-        page.screenshot(path=str(output / 'walkthrough.png'))
+        page.locator('video').evaluate('(v)=>v.pause()');page.screenshot(path=str(output / 'walkthrough.png'))
         page.click('a.action')
         page.wait_for_function('window.PPOStep && PPOStep.status().ready')
         check('Video-page call to action opens the running simulation', status()['ready'] and urlparse(page.url).path.endswith('/index.html'))
         check('No browser JavaScript errors', not REPORT['pageErrors'], REPORT['pageErrors'])
-        context.close()
-        browser.close()
+        context.close();browser.close()
 
 
 if __name__ == '__main__':
@@ -202,15 +186,12 @@ if __name__ == '__main__':
     parser.add_argument('--expected-revision', required=True)
     parser.add_argument('--wait-seconds', type=int, default=240)
     parser.add_argument('--output', type=Path, default=ROOT / 'evidence/pages')
-    args = parser.parse_args()
-    args.output.mkdir(parents=True, exist_ok=True)
+    args = parser.parse_args();args.output.mkdir(parents=True, exist_ok=True)
     try:
         run(args.base_url, args.expected_revision, args.output, args.wait_seconds)
         REPORT['passed'] = True
     except Exception:
-        REPORT['passed'] = False
-        REPORT['error'] = traceback.format_exc()
-        raise
+        REPORT['passed'] = False;REPORT['error'] = traceback.format_exc();raise
     finally:
         (args.output / 'report.json').write_text(json.dumps(REPORT, ensure_ascii=False, indent=2) + '\n')
         print(json.dumps({'passed': REPORT['passed'], 'checks': len(REPORT['checks']), 'baseUrl': REPORT.get('baseUrl')}, indent=2), flush=True)

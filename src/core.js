@@ -21,13 +21,13 @@ class CartPole {
  refreshObservation(){this.sensed=this.s.map((x,i)=>x+this.params.noise[i]*this.noiseRng.normal());}
  obs(){const [x,v,t,w]=this.sensed;return [(this.goal-x)/2.4,v/2.5,t/(Math.PI/15),w/2.5,this.goal/2.4];}
  disturbance(){const p=this.params,k=this.steps-p.pushOffset;return p.bias+(k>=0&&k%p.pushPeriod<p.pushDuration?p.pushSign*(Math.floor(k/p.pushPeriod)%2?-1:1)*p.pushAmp:0);}
- step(action,externalForce=0){if(this.done)throw Error('Reset terminated environment.');if(action!==0&&action!==1||!Number.isFinite(externalForce))throw Error('Invalid action or external force.');const p=this.params,command=(action?1:-1)*this.spec.force;this.forceQueue.push(command);const delayed=this.forceQueue.length>p.delay?this.forceQueue.shift():0,requested=delayed*p.gain;
+ step(action,externalForce=0,tipForce=0){if(this.done)throw Error('Reset terminated environment.');if(action!==0&&action!==1||!Number.isFinite(externalForce)||!Number.isFinite(tipForce))throw Error('Invalid action or external force.');const p=this.params,command=(action?1:-1)*this.spec.force;this.forceQueue.push(command);const delayed=this.forceQueue.length>p.delay?this.forceQueue.shift():0,requested=delayed*p.gain;
   const envForce=this.disturbance(),ext=externalForce+envForce;let drive,peakTractionRatio=0,lostContact=false;
-  for(let k=0;k<4;k++){this.controlForce=p.tau>0?this.controlForce+(1-Math.exp(-.005/p.tau))*(requested-this.controlForce):requested;const r=P.integrate(this.s,this.spec,p,this.controlForce,ext,.005);this.s=r.state;drive=r.drive;peakTractionRatio=Math.max(peakTractionRatio,drive.tractionRatio);lostContact=lostContact||drive.contactLost;}drive.peakTractionRatio=peakTractionRatio;
+  for(let k=0;k<4;k++){this.controlForce=p.tau>0?this.controlForce+(1-Math.exp(-.005/p.tau))*(requested-this.controlForce):requested;const r=P.integrate(this.s,this.spec,p,this.controlForce,ext,.005,tipForce);this.s=r.state;drive=r.drive;peakTractionRatio=Math.max(peakTractionRatio,drive.tractionRatio);lostContact=lostContact||drive.contactLost;}drive.peakTractionRatio=peakTractionRatio;
   this.motorForce=drive.motorForce;this.steps++;this.terminated=Math.abs(this.s[0])>2.4||Math.abs(this.s[2])>Math.PI/15;this.validityLimit=peakTractionRatio>1||lostContact;
   // A no-slip model cannot truthfully continue after its friction-cone bound.
   if(this.validityLimit)this.terminated=true;this.truncated=this.enforceTimeLimit&&this.steps>=this.timeLimit;this.done=this.terminated||this.truncated;
-  const parts=rewardParts(this.s,this.goal,this.spec),reward=Object.values(parts).reduce((a,b)=>a+b,0);this.return+=reward;this.refreshObservation();this.lastOut={reward,parts,terminated:this.terminated,truncated:this.truncated,done:this.done,command,requested,motorForce:this.motorForce,force:drive.contactForce+ext-p.friction*this.s[1],externalForce:ext,userForce:externalForce,envForce,xa:drive.acc,ta:drive.alpha,drive,failureReason:this.validityLimit?'no_slip_model_limit':Math.abs(this.s[2])>Math.PI/15?'pole_angle':Math.abs(this.s[0])>2.4?'track_limit':null};return this.lastOut;
+  const parts=rewardParts(this.s,this.goal,this.spec),reward=Object.values(parts).reduce((a,b)=>a+b,0);this.return+=reward;this.refreshObservation();this.lastOut={reward,parts,terminated:this.terminated,truncated:this.truncated,done:this.done,command,requested,motorForce:this.motorForce,force:drive.contactForce+ext+tipForce-p.friction*this.s[1],externalForce:ext,userForce:externalForce,envForce,tipForce,tipMoment:drive.tipMoment,tipApplicationPoint:'pole_tip',wrenchSchema:'cart+tip/v1',xa:drive.acc,ta:drive.alpha,drive,failureReason:this.validityLimit?'no_slip_model_limit':Math.abs(this.s[2])>Math.PI/15?'pole_angle':Math.abs(this.s[0])>2.4?'track_limit':null};return this.lastOut;
  }
 }
 
@@ -112,7 +112,7 @@ class Trainer {
       }
     }
     this.trainedPlant=JSON.parse(JSON.stringify(this.hp.plant));this.trainedProfile=this.collectionProfile;this.iter++;const delta=Math.sqrt(this.actor.p.reduce((s,p,i)=>s+(p-this.initial[i])**2,0));
-    this.last={actorGrad:ga,criticGrad:gc,entropy:ent/count,clipFraction:cf/count,piLoss:pi/count,valueLoss:vl/count,approxKL:kl/count,delta,adamSteps:this.actor.t,adam,backprop:trace};
+    this.last={actorGrad:ga,criticGrad:gc,entropy:ent/count,clipFraction:cf/count,piLoss:pi/count,valueLoss:vl/count,approxKL:kl/count,delta,adamSteps: this.actor.t,adam,backprop:trace};
     if(![...this.actor.p,...this.critic.p].every(Number.isFinite))throw new Error('Non-finite parameters: training stopped.');
     return this.last;
   }

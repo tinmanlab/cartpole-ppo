@@ -18,6 +18,11 @@ def read(name: str) -> str:
 def catalog() -> str:
     data = {lang: json.loads((REPO / 'locales' / f'{lang}.json').read_text(encoding='utf-8'))
             for lang in ('en', 'ko')}
+    extra = json.loads((REPO / 'locales' / 'interaction.json').read_text(encoding='utf-8'))
+    for lang in data:
+        if data[lang].keys() & extra[lang].keys():
+            raise ValueError('Duplicate interaction message key.')
+        data[lang].update(extra[lang])
     if data['en'].keys() != data['ko'].keys():
         raise ValueError('English and Korean must have identical message keys.')
     for key in data['en']:
@@ -31,11 +36,11 @@ def catalog() -> str:
 
 
 def build(language: str = 'en') -> str:
-    extension = '\n'.join(read(name) for name in ('extension.js', 'locale_refresh.js', 'ui_extra.js'))
+    extension = '\n'.join(read(name) for name in ('extension.js', 'locale_refresh.js', 'ui_extra.js', 'interaction.js'))
     if read('app.js').count('/* EXTENSION */') != 1:
         raise ValueError('The app must have exactly one extension slot.')
     parts = {
-        'STYLE': read('style.css'),
+        'STYLE': read('style.css') + '\n' + read('interaction.css'),
         'I18N': catalog() + read('i18n.js') + '\n' + read('locale_boot.js'),
         'CORE': '\n'.join(read(name) for name in ('bam_params.js', 'plant.js', 'core.js')),
         'LESSON': read('lesson.js'), 'WORKER': read('worker.js'),
@@ -57,7 +62,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, default=REPO / 'index.html')
     parser.add_argument('--lang', choices=['en', 'ko'], default='en')
-    parser.add_argument('--check', action='store_true', help='Fail if committed viewer bytes differ from the build.')
+    parser.add_argument('--check', action='store_true', help='Fail if generated viewer bytes differ from the source build.')
     args = parser.parse_args()
     targets = [(args.output, args.lang)]
     if args.output.resolve() == (REPO / 'index.html').resolve():

@@ -21,8 +21,10 @@ const Plant=(()=>{
  }
  // 1D, no-slip constrained cart. Two driven wheel/rotor inertias reflected into
  // x. Semi-implicit 200-Hz stepping; electrical/mechanical damping implicit.
- function integrate(state,s,p,command,external,dt=.005){let [x,v,t,w]=state;const a=ACTUATORS[s.actuator],n=2,r=WHEEL.radius,rg=r*s.ratio,co=Math.cos(t),sn=Math.sin(t),J=s.actuator==='ideal'?0:n*WHEEL.inertia/r**2+n*a.armature/rg**2,D=p.mc+p.mp+J-.75*p.mp*co*co;
-  const B=external-p.friction*v+p.mp*p.l*w*w*sn-.75*p.mp*s.gravity*sn*co;
+ function integrate(state,s,p,command,external,dt=.005,tipForce=0){if(!Number.isFinite(tipForce))throw Error('Invalid pole-tip force');let [x,v,t,w]=state;const a=ACTUATORS[s.actuator],n=2,r=WHEEL.radius,rg=r*s.ratio,co=Math.cos(t),sn=Math.sin(t),J=s.actuator==='ideal'?0:n*WHEEL.inertia/r**2+n*a.armature/rg**2,D=p.mc+p.mp+J-.75*p.mp*co*co;
+  // Virtual work: Qx = Ftip, Qtheta = 2*l*cos(theta)*Ftip.
+  // Eliminate rod acceleration using I_pivot = (4/3)*mp*l^2.
+  const B=external-p.friction*v+p.mp*p.l*w*w*sn-.75*p.mp*s.gravity*sn*co+tipForce*(1-1.5*co*co);
   let voltage=0,motor=0,dry=0,damping=0,emfD=0,drive0=command,friction={frictionloss:0,damping:0,stribeck:0},saturated=false;
   if(s.actuator!=='ideal'){
    const requested=command*rg/n*a.R/a.kt,limit=a.vin*a.maxPWM;
@@ -31,7 +33,7 @@ const Plant=(()=>{
    drive0=n*a.kt*voltage/a.R/rg;emfD=n*a.kt*a.kt/a.R/rg**2;damping=n*friction.damping/rg**2;dry=n*friction.frictionloss/rg;
   }
   const denominator=D+dt*(damping+emfD),free=(D*v+dt*(drive0+B))/denominator,stop=Math.min(Math.abs(free),dt*dry/denominator),nextV=free-Math.sign(free)*stop;
-  const resist=Math.sign(free)*stop*denominator/dt,acc=(nextV-v)/dt,alpha=(s.gravity*sn-co*acc)/(p.l*4/3),nextW=w+alpha*dt;
+  const resist=Math.sign(free)*stop*denominator/dt,acc=(nextV-v)/dt,alpha=(s.gravity*sn-co*acc+2*tipForce*co/p.mp)/(p.l*4/3),nextW=w+alpha*dt;
   const motorForce=s.actuator==='ideal'?command:n*motorTorque(a,voltage,nextV/rg)/rg;
   // Total normal reaction from vertical acceleration of the rod COM.
   // This remains a planar, rigid, no-slip model; a violated contact constraint
@@ -40,7 +42,7 @@ const Plant=(()=>{
   const normalForce=(p.mc+p.mp)*s.gravity-p.mp*p.l*(alpha*sn+w*w*co);
   const tractionLimit=s.mu*Math.max(0,normalForce);
   const tractionRatio=Math.abs(contact)/Math.max(1e-12,tractionLimit);
-  return {state:[x+nextV*dt,nextV,t+nextW*dt,nextW],drive:{voltage,current:s.actuator==='ideal'?0:(voltage-a.kt*nextV/rg)/a.R,motorTorque:s.actuator==='ideal'?0:motorTorque(a,voltage,nextV/rg),externalTorque:B*rg/n,rotorSpeed:nextV/rg,rotorInertia:a.armature||0,reflectedMass:J,frictionBudget:friction.frictionloss,frictionTorque:resist*rg/n,viscousTorque:s.actuator==='ideal'?0:friction.damping*nextV/rg,motorForce,contactForce:contact,normalForce,tractionLimit,contactLost:normalForce<=0,tractionRatio,saturated,acc,alpha,wheelAngle:(x+nextV*dt)/r,rotorAngle:(x+nextV*dt)/rg}};
+  return {state:[x+nextV*dt,nextV,t+nextW*dt,nextW],drive:{voltage,current:s.actuator==='ideal'?0:(voltage-a.kt*nextV/rg)/a.R,motorTorque:s.actuator==='ideal'?0:motorTorque(a,voltage,nextV/rg),externalTorque:B*rg/n,rotorSpeed:nextV/rg,rotorInertia:a.armature||0,reflectedMass:J,frictionBudget:friction.frictionloss,frictionTorque:resist*rg/n,viscousTorque:s.actuator==='ideal'?0:friction.damping*nextV/rg,motorForce,contactForce:contact,normalForce,tractionLimit,contactLost:normalForce<=0,tractionRatio,saturated,acc,alpha,tipForce,tipMoment:2*p.l*co*tipForce,wheelAngle:(x+nextV*dt)/r,rotorAngle:(x+nextV*dt)/rg}};
  }
  const STAGES=['nominal','push','sensor','actuator','model','mixed'];
  function newCurriculum(plan='fixed'){if(!['fixed','ramp','staged'].includes(plan))throw Error('Invalid learning plan.');return {plan,index:0,streak:0,last:null,history:[],phaseStart:0};}

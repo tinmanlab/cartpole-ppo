@@ -1,74 +1,55 @@
 # CartPole PPO Studio
 
-**Watch a policy balance a pole. Follow one real decision all the way to a weight update.**
+**Push the pole. Watch the controller respond. Follow one real decision into the network.**
 
-A bilingual reinforcement-learning lab that runs in your browser: real CartPole physics, real PPO learning in a Web Worker, and inspectable Actor/Critic arithmetic. No GPU, account, or backend service is required.
+**[Open interactive simulation →](https://tinmanlab.github.io/cartpole_PPO/?lang=en)** · **[한국어로 실행](https://tinmanlab.github.io/cartpole_PPO/index.html?lang=ko)** · [한국어 안내](README.ko.md)
 
-**[Open interactive simulation →](https://tinmanlab.github.io/cartpole_PPO/?lang=en)** · **[한국어로 실행](https://tinmanlab.github.io/cartpole_PPO/index.html?lang=ko)** · **[Watch the walkthrough](https://tinmanlab.github.io/cartpole_PPO/docs/demo.html)**
+One CartPole, five connected lessons, real PPO in your browser. No GPU, account, API key or learning backend. English and Korean share the same engine; switching language does not reset your experiment.
 
-[![Watch the actual browser walkthrough](docs/media/demo.gif)](https://tinmanlab.github.io/cartpole_PPO/docs/demo.html)
+## Start with a question
 
-[한국어 안내](README.ko.md) · [Model & limits](docs/MODEL.md) · [Hosting and live checks](docs/PAGES.md)
-
-> **Online:** use the simulation link above; it opens the running app, not GitHub’s source preview. **Offline:** download this repository and open `index.html` in a desktop browser. Change **Language** without restarting the simulation or learner. `viewer.ko.html` starts in Korean.
-
-## Three ways to use it
-
-| Your question | Where to go |
+| Your question | Try this |
 |---|---|
-| **What does the network actually compute?** | Chapters 1–4: one observation → both networks → reward/GAE → the actual minibatch and Adam update. Click a neuron; inspect its arithmetic directly below. |
-| **Can it learn here, rather than replay an animation?** | Chapter 5 → **Start training**. Your learner starts at random I.0, separately from the pretrained example. Finished iterations update the displayed policy. |
-| **What happens with a different motor, cost or disturbance?** | **Model · conditions**. Choose **Apply to test only**, **Keep weights · configure continuation**, or **Create new learner**—then explicitly start training. |
+| **Is the controller responding to my push?** | Hold a push button or ←/→. The force acts horizontally at the **pole tip**, only while held. Start with 0.1 N. Watch the control-step counter and **sensed state → Actor command → actual wheel force → response**. |
+| **What does the network compute?** | **Inspect this live decision** pauses the scene and opens the forward pass. Click a neuron to inspect multiply, sum, bias and tanh. Chapters 3–4 instead follow a clearly labelled **recorded training experience** into GAE, gradients and Adam. |
+| **Can I train a policy myself?** | Chapter 5 → **Start training**. Your learner starts at random I.0, independently of the pretrained opening example. Finish an iteration before freezing its policy for inference. |
+| **What changes if I choose another motor, cost or disturbance?** | **Model · conditions** separates **test only**, **keep weights and configure continuation**, and **create a new learner**. Applying conditions is not starting training. |
 
-The opening cart uses a **bundled, genuinely trained example**. It does not imply that your own learner has already trained. Recorded calculation playback never changes weights. Testing a frozen policy never trains it.
+**Inference is not learning.** During a held push, the Actor still computes an action every 20 ms; its weights remain fixed unless the separate learner publishes a completed update. Release, focus loss, pause, reset or a physical/model stop clears held force. No hand-coded balancing controller is inserted.
 
-## What makes the lab useful
+**Tip force is not cart force.** A tip force also creates a moment. Existing training presets and scripted evaluations still apply **cart-body** disturbances; a manual tip push is test-only and is not sent to the learner. A 12 N tip test cannot inherit a 12 N cart-body recovery score. Strong loads can terminate the trial or exceed the no-slip/contact model; the visible stop reason distinguishes these cases.
 
-- **Five connected lessons, one simulation.** Actor `5→16→2`; Critic `5→16→1`. Activation values and signed weights are distinct from recorded update deltas. A selected sample stays selected across chapters.
-- **Actual PPO.** Rollouts, termination-aware GAE, clipped surrogate, entropy bonus, analytic backpropagation, minibatch means, gradient clipping and Adam. Inspect the numbers that were actually used—not staged “learning” effects.
-- **Actuator-aware physics.** Select XL330, MX64, MX106, or an ideal-force comparison. The JavaScript port uses pinned [Rhoban/BAM](https://github.com/Rhoban/bam) M6 parameters and torque/friction equations, with an explicitly separate wheel-drive adapter.
-- **Deliberate experiments.** Change position, velocity and angle costs; inspect mass, gearing, voltage saturation and contact limits; introduce pushes, wind, sensor noise, delays and parameter variation. Fixed, ramped and success-gated curricula are separate choices.
-- **Repeatable inspection.** Slow/stepwise replay, frozen uncapped inference, optional auto-reset, held-out tests with exposure/failure diagnostics, and versioned optimizer checkpoints. EN/KO share one engine and one source of messages.
+[Tip-force contract and equations](docs/TIP_FORCE.md) · [Hands-on tutorial](docs/TUTORIAL.md) · [Model & limits](docs/MODEL.md)
 
-## Try this first
+## What is real here?
 
-Open **Actor · Critic**, select a neuron, then step through **Multiply + sum → tanh → Outputs**. Go to **Learning signal**, then **PPO update** without changing the sample. You can now distinguish “the input changed” from “the weights changed.”
+- **PPO:** 2,048-step rollouts, termination-aware GAE, clipped surrogate, entropy bonus, analytic backpropagation, minibatch means, gradient clipping and Adam. Actor `5→16→2`; Critic `5→16→1`.
+- **Actuator-aware physics:** XL330, MX64 and MX106 use pinned [Rhoban/BAM](https://github.com/Rhoban/bam) M6 parameters and torque/friction equations through an explicitly separate wheel-drive adapter. An ideal-force reference remains available.
+- **Repeatable experiments:** reward costs, mass/gearing, pushes, wind, noise, delay and parameter variation; fixed, ramped and success-gated curricula; optimizer checkpoints and stepwise recorded replay.
+- **Inspectable numbers:** signed weights, activations and update deltas are different quantities. They are not green/red performance scores. The selected experience is preserved across the learning chapters.
 
-For your first experiment, keep the default XL330 and nominal conditions. Train in chapter 5, then **Finish · freeze**. Try a small 4 N push and inspect the force trace. A manual push is a test input—not training data. A larger push may cross this model's contact limit; it is not automatically a policy failure or a meaningful hardware test.
+The cart is a planar reduced-order model, not a full mobile robot. The wheel mesh is a dimensional reconstruction, not the original manufacturer STL. Slip after loss of traction, thermal protection, hardware watchdogs and real-device safety are not simulated. Real-time ratio is measured, not guaranteed on every computer. No all-disturbance or sim-to-real success claim is made.
 
-[Full hands-on tutorial](docs/TUTORIAL.md) · [Experiment/model contract](docs/MODEL.md) · [Verification](docs/VERIFICATION.md)
+## Earlier walkthrough
 
-## Evidence, not a robustness claim
+[![Earlier browser walkthrough; the current viewer uses held pole-tip pushes](docs/media/demo.gif)](https://tinmanlab.github.io/cartpole_PPO/docs/demo.html)
 
-Tests cover all **243 neural parameters** against finite differences, recorded Adam reconstruction, checkpoint continuation, three-motor BAM equation parity, real browser training, and EN/KO state preservation. The walkthrough is a recording of the distributed HTML. [Capture and verification provenance](docs/VERIFICATION.md) explains the conditions and what was not tested.
+**[Watch the earlier walkthrough](https://tinmanlab.github.io/cartpole_PPO/docs/demo.html).** This real recording predates held-tip input and shows timed cart-body pulses. It remains useful for the network/PPO lessons, but is **not** footage of the current interaction. Its exact English source is preserved in `archive/en/body-pulse.v2.html`; the previous Korean version remains in `archive/ko/`.
 
-This is a **goal-conditioned educational CartPole**, not the unchanged Gymnasium benchmark and not a deployable robot controller. BAM is an equation port, not the Python/MuJoCo runtime or complete motor firmware. The wheel's dimensions/inertia are sourced; its appearance is a local reconstruction, **not the original STL**. Tire slip, full chassis dynamics, thermal protection and real hardware validation remain out of scope. No success on all OOD disturbances is promised.
+## Online, offline and verification
 
-## Develop and reproduce
-
-Runtime: a desktop browser only. Build: Python 3 standard library. Engine tests: Node.js 22.
+Use the live link above with no installation. To build an offline copy from a source checkout:
 
 ```bash
-python src/build.py            # index.html + viewer.ko.html, from the same sources
-node tools/test.js             # numerical, physics, checkpoint and locale tests
-python src/build.py --check    # committed HTML matches the sources
+python src/build.py
+# Open the generated index.html or viewer.ko.html in a desktop browser.
+node tools/test.js
+python src/build.py --check
+python tools/check_package.py
 ```
 
-Browser/independent equation tests and the actual-video capture:
+Building needs only Python's standard library. Generated HTML entries are distribution artifacts, not a second editable source. Pages CI builds and checks both languages before publishing. Browser tests additionally require `requirements-dev.txt` and a Playwright-compatible browser.
 
-```bash
-python -m pip install -r requirements-dev.txt
-python -m playwright install chromium
-python tests/test_bilingual.py
-python tests/test_browser_bam.py
-python tests/reference_parity.py
-python tools/record_demo.py
-```
+[Hosting and live checks](docs/PAGES.md) · [Earlier engine verification](docs/VERIFICATION.md) · [Contributing](CONTRIBUTING.md) · [Third-party notices](THIRD_PARTY.md)
 
-Set `CHROMIUM_PATH` when using an existing Chromium executable. Recording additionally requires **ffmpeg** and **ffprobe**. See [CONTRIBUTING.md](CONTRIBUTING.md) for data regeneration and review checks.
-
-## Source map and attribution
-
-`src/` owns physics, PPO, lessons and rendering. `locales/` owns EN/KO wording. `examples/` contains version-2 trained checkpoints. `docs/` contains the walkthrough and experiment boundaries. `archive/ko/` preserves the original Korean viewer without changing its bytes; it is a historical version, not a second active implementation.
-
-The repository's original [MIT license](LICENSE) is retained. **BAM-derived code and imported model data retain Apache-2.0 notices**; see [THIRD_PARTY.md](THIRD_PARTY.md), [BAM provenance](vendor/bam/NOTICE.md), and [wheel provenance](assets/NOTICE.md).
+The hosted acceptance tests check the exact deployed revision, real pointer/key holds, continued inference, cancellation paths, a genuine PPO iteration, language round trips, replay, media playback and working shortcuts. Passing these checks is not a robustness or hardware certification.

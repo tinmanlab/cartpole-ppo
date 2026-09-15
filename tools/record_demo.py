@@ -1,4 +1,4 @@
-"""Record the actual offline viewer and create H.264 MP4 + a README GIF.
+"""Reproduce the HISTORICAL body-pulse walkthrough from its archived viewer.
 
 Only an editorial caption is overlaid. Physics, policies, metrics, clocks and
 Web Workers are unmodified. This is a feature walkthrough, not a benchmark.
@@ -21,7 +21,7 @@ with sync_playwright() as pw:
  page=context.new_page();page.set_default_timeout(15000)
  page.on('pageerror',lambda e:errors.append(str(e)))
  page.on('request',lambda q:requests.append(q.url) if q.url.startswith(('http:','https:')) else None)
- page.set_content((ROOT/'index.html').read_text(),wait_until='load');page.wait_for_function('PPOStep.status().ready')
+ page.set_content((ROOT/'archive/en/body-pulse.v2.html').read_text(),wait_until='load');page.wait_for_function('PPOStep.status().ready')
  page.click('#dismissGuide')
  world_box=page.locator('.world-card').bounding_box()
  page.evaluate("""()=>{const e=document.createElement('div');e.id='recordingCaption';e.style.cssText='position:fixed;bottom:14px;left:50%;transform:translateX(-50%);max-width:94%;background:#14283dee;color:white;border-radius:8px;padding:12px 24px;font:600 19px system-ui;z-index:100;pointer-events:none;text-align:center;box-shadow:none';document.body.append(e);} """)
@@ -84,6 +84,6 @@ crop='crop='+':'.join(map(str,roi))
 # A short, genuine excerpt is the README's embedded preview, linked to the MP4.
 run('ffmpeg','-y','-ss','4','-t','14','-i',str(MEDIA/'walkthrough.mp4'),'-filter_complex',crop+',fps=10,scale=800:-2:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer:bayer_scale=4','-loop','0',str(MEDIA/'demo.gif'))
 info=json.loads(subprocess.check_output(['ffprobe','-v','quiet','-show_streams','-show_format','-of','json',str(MEDIA/'walkthrough.mp4')]))
-report={'sourceHTML_SHA256':hashlib.sha256((ROOT/'index.html').read_bytes()).hexdigest(),'capture':'Real Chromium viewport recording; set_content loaded exact standalone HTML bytes. Editorial captions only. No metric mocks, physics speed changes or hidden control law.','chapterCaptions':segments,'previewCrop':world_box,'scriptRunSeconds':end,'pageErrors':errors,'remoteRequests':requests,'lastState':state,'media':{'duration':float(info['format']['duration']),'codec':info['streams'][0]['codec_name'],'width':info['streams'][0]['width'],'height':info['streams'][0]['height'],'bytes':(MEDIA/'walkthrough.mp4').stat().st_size}}
+report={'sourceHTML_SHA256':hashlib.sha256((ROOT/'archive/en/body-pulse.v2.html').read_bytes()).hexdigest(),'capture':'Real Chromium viewport recording; set_content loaded exact standalone HTML bytes. Editorial captions only. No metric mocks, physics speed changes or hidden control law.','chapterCaptions':segments,'previewCrop':world_box,'scriptRunSeconds':end,'pageErrors':errors,'remoteRequests':requests,'lastState':state,'media':{'duration':float(info['format']['duration']),'codec':info['streams'][0]['codec_name'],'width':info['streams'][0]['width'],'height':info['streams'][0]['height'],'bytes':(MEDIA/'walkthrough.mp4').stat().st_size}}
 (ROOT/'evidence/media_recording.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
 print(json.dumps(report['media'],indent=2))

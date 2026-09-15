@@ -2,7 +2,7 @@
 
 ## Entry points
 
-`index.html` and `viewer.ko.html` are **generated** from the same `src/` and `locales/`. The sole entry difference is the initial language. Edit the sources, then run `python src/build.py`. Do not hand-edit generated files or overwrite the byte-preserved archive.
+`index.html` and `viewer.ko.html` are **generated build outputs, not tracked sources**, from the same `src/` and `locales/`. The sole entry difference is the initial language. Edit the sources, then run `python src/build.py`. CI does the same before staging Pages; the published HTML remains fully standalone. Do not hand-edit generated files or overwrite the byte-preserved archive.
 
 `src/plant.js` owns actuator/wheel coupling and physical ranges. `src/core.js` owns dynamics state, PPO and checkpoints. `src/lesson.js` explains stored computations without changing them. `src/app.js` owns the viewer; `src/extension.js` owns condition transactions. Locale changes must not mutate any of those numerical states.
 
@@ -40,13 +40,13 @@ Each command trains from seed 123 for a **declared 240-iteration budget**; the f
 
 Do not overwrite evidence with a marketing-friendly subset. Keep nominal and held-out conditions, pulse exposure and model-invalid outcomes separate. A demonstration video is not an evaluation sample.
 
-## Record the public walkthrough
+## Reproduce the historical walkthrough
 
 ```bash
 python tools/record_demo.py
 ```
 
-Requires ffmpeg/ffprobe on PATH and Playwright's video recorder dependency. The script operates the real viewer, overlays short editorial captions, and saves MP4/GIF/screenshots and `evidence/media_recording.json`. No fake charts, hidden PID or physics-speed changes. It is a scripted UI tour, not an exhaustive benchmark. Review the encoded video and representative frames after recording.
+Requires ffmpeg/ffprobe on PATH and Playwright's video recorder dependency. The script intentionally opens `archive/en/body-pulse.v2.html`, not the current held-tip viewer. It operates that real historical viewer, overlays short editorial captions, and saves MP4/GIF/screenshots and `evidence/media_recording.json`. No fake charts, hidden PID or physics-speed changes. It is a scripted UI tour, not an exhaustive benchmark. Review the encoded video and representative frames after recording.
 
 ## Review gates
 
@@ -55,3 +55,5 @@ Check that a condition draft does not apply itself; test-only does not retrain; 
 Physical changes require a model/checkpoint version decision and fresh examples/evidence. Do not reinterpret old checkpoints as the same experiment. Importing real CAD does not by itself identify friction, inertia, contact behavior or safe operating limits.
 
 Keep runtime dependencies at zero unless a demonstrated gap justifies a change. Avoid new orchestration, backend databases, decorative effects or multiple competing rendering/translation frameworks.
+
+The held tip wrench is an optional external input (`cart+tip/v1`). The default zero-tip branch is numerically identical to the pinned planar-bam/2 plant. Historical checkpoints, curricula and body-pulse evaluations are not relabelled as tip-force training. `tests/test_tip.js` verifies the coupled equations and legacy no-tip parity. `tests/test_tip_browser.py` verifies held input on local or hosted HTML.

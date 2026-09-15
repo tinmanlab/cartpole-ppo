@@ -17,7 +17,7 @@ class PagesContract(unittest.TestCase):
             target = Path(folder) / 'site'
             report = package.stage(ROOT, target, 'a' * 40)
             self.assertEqual(report['revision'], 'a' * 40)
-            for name in ('index.html', 'viewer.ko.html', 'docs/media/walkthrough.mp4', 'docs/media/demo.gif', 'archive/ko/bam-studio.original.html'):
+            for name in ('index.html', 'viewer.ko.html', 'docs/media/walkthrough.mp4', 'docs/media/demo.gif', 'archive/ko/bam-studio.original.html', 'archive/en/body-pulse.v2.html'):
                 self.assertEqual((target / name).read_bytes(), (ROOT / name).read_bytes())
                 self.assertEqual(report['files'][name]['sha256'], hashlib.sha256((ROOT / name).read_bytes()).hexdigest())
             self.assertTrue((target / '.nojekyll').is_file())

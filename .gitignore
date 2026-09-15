@@ -14,3 +14,7 @@ evidence/preview_crop.json
 _site/
 evidence/local-pages/
 evidence/public-pages/
+# Standalone distribution files are produced by src/build.py and Pages CI.
+/index.html
+/viewer.ko.html
+evidence/tip-browser/

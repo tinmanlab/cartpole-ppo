@@ -23,9 +23,11 @@ for path in [ROOT/'README.md',ROOT/'README.ko.md',ROOT/'CONTRIBUTING.md',ROOT/'T
   clean=link.split('#')[0]
   require((path.parent/clean).exists(),f'Broken local documentation link in {path.name}: {link}')
 report=json.loads((ROOT/'evidence/media_recording.json').read_text())
-require(report['sourceHTML_SHA256']==hashlib.sha256(a).hexdigest(),'Walkthrough does not match this viewer build; recapture after source changes')
+require(report['sourceHTML_SHA256']==hashlib.sha256((ROOT/'archive/en/body-pulse.v2.html').read_bytes()).hexdigest(),'Historical walkthrough source checksum differs')
 require(report['media']['codec']=='h264','Walkthrough must use browser-compatible H.264')
 require(report['media']['duration']>45,'Walkthrough is too short for the documented actual workflow')
 require(not report['pageErrors'] and not report['remoteRequests'],'Capture had errors or external runtime requests')
 require((ROOT/'docs/media/demo.gif').stat().st_size<8*1024*1024,'GIF is needlessly large for a README')
+require('Earlier version' in (ROOT/'docs/demo.html').read_text(), 'Video page must disclose the earlier body-pulse controls')
+
 print(f'{checks} package checks passed.')

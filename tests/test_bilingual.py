@@ -23,7 +23,7 @@ with sync_playwright() as pw:
  p.wait_for_timeout(80);a=identity(p)
  p.select_option('#language','ko');p.wait_for_timeout(100)
  check('Korean switch preserves weights, physics, clocks, RNG and selected record',identity(p)==a)
- check('Korean interface renders Korean labels',p.locator('#chapterTitle').inner_text()==p.evaluate("tr('m0001')"))
+ check('Korean interface renders Korean labels',p.locator('#chapterTitle').inner_text()==p.evaluate("tr('tip.title')"))
  p.select_option('#language','en');p.wait_for_timeout(100);check('Round trip to English preserves all numerical state',identity(p)==a)
  for chapter in range(1,6):
   p.click(f'[data-chapter="{chapter}"]');p.wait_for_timeout(100)
@@ -46,7 +46,7 @@ with sync_playwright() as pw:
  check('Draft locale refresh does not apply draft to physics or learner',identity(p)==before and status(p)['testPlant']['mc']==1)
  p.click('#testOnly');check('Explicit test-only applies reward and physical fields, not training',status(p)['testPlant']['rewardPosition']==1.25 and status(p)['trainingPlant']['rewardPosition']==.5)
  # Restore matched scenario for an independent physical test.
- p.click('#matchPolicyWorld');p.click('[data-chapter="5"]')
+ p.locator('#conditionDetails').evaluate('(e)=>e.open=true');p.click('#matchPolicyWorld');p.click('[data-chapter="5"]')
  if not status(p)['paused']:p.click('#playWorld')
  before=p.evaluate('JSON.stringify(S.applied.policy)')
  p.click('#evaluatePolicy');p.wait_for_function('!PPOStep.status().evalBusy && PPOStep.status().evalRows!==null',timeout=45000)

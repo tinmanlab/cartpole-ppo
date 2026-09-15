@@ -48,10 +48,10 @@ function chooseRecord(iter) { if (!DATA[S.source].has(iter))
     S.sample = ix < 0 ? 0 : ix;
 } fillRecords(); render(); }
 function chooseSource(src) { S.source = src; S.followRecord = false; S.selected = DATA[src].has(120) ? 120 : [...DATA[src].keys()].at(-1) ?? 0; chooseRecord(S.selected); fillRecords(); render(); }
-function setChapter(n) { n = clip(n, 1, 5); S.chapter = n; S.calcPlaying = false; S.lastTs = null; if (isSample())
+function setChapter(n) { releaseHold(); n = clip(n, 1, 5); S.chapter = n; S.calcPlaying = false; S.lastTs = null; if (isSample())
     S.followRecord = false; render(); }
 function apply(record, src, follow = false) { if (!record)
-    return; Lesson.validatePolicy(record.policy); S.actor = MLP.from(record.policy.actor); S.critic = MLP.from(record.policy.critic); S.applied = record; S.appliedSource = src; S.followPolicy = follow; }
+    return; Lesson.validatePolicy(record.policy); S.actor = MLP.from(record.policy.actor); S.critic = MLP.from(record.policy.critic); S.applied = record; S.appliedSource = src; S.followPolicy = follow; S.lastFrame = null; }
 function applySelected() { const r = selected(); if (!r)
     return; apply(r, S.source, false); S.mode = 'live'; S.replayPlaying = false; setChapter(5); toast(tr("m0021", sourceName(), r.iter)); }
 function initializeWorker(applyOnReady = false) {
@@ -195,29 +195,29 @@ function syncTimeCap() { if (!S.env)
     S.env.done = false;
     S.env.truncated = false;
 } }
-function resetWorld() { S.env.reset(+$('target').value); syncTimeCap(); S.lastFrame = null; S.pulseSteps = 0; S.liveTrace = []; S.resets++; S.lastTs = null; updateChrome(); drawWorld(); }
+function resetWorld() { releaseHold(); S.env.reset(+$('target').value); syncTimeCap(); S.lastFrame = null; S.pulseSteps = 0; S.liveTrace = []; S.resets++; S.lastTs = null; updateChrome(); drawWorld(); }
 function setGoal(v) { v = Math.round(clip(v, -1, 1) * 20) / 20; $('target').value = v; S.env.goal = v; $('targetText').textContent = F(v, 2) + ' m'; }
-function push(dir) { if (isSample() || S.mode === 'replay' || S.paused || S.env.done && !$('autoReset').checked) {
-    toast(tr("m0029"));
-    return;
-} S.pulse = dir * +$('pushForce').value; S.pulseSteps = Math.round(+$('pushDuration').value / DT); }
 function physics() {
     syncTimeCap();
     if (S.env.done) {
         if (!$('autoReset').checked)
             return false;
+        releaseHold();
         S.env.reset(+$('target').value);
         syncTimeCap();
         S.pulseSteps = 0;
         S.resets++;
         S.liveTrace = [];
     }
-    const e = S.env, s = e.s.slice(), obs = e.obs(), ac = policy(S.actor, obs, true), val = S.critic.forward(obs).y[0], step = e.steps, external = S.pulseSteps > 0 ? S.pulse : 0, out = e.step(ac.a, external);
+    const e = S.env, s = e.s.slice(), obs = e.obs(), ac = policy(S.actor, obs, true), val = S.critic.forward(obs).y[0], step = e.steps, external = S.pulseSteps > 0 ? S.pulse : 0, tip = heldForce(), out = e.step(ac.a, external, tip);
+    HOLD.policyCalls++;
+    if (tip) { HOLD.appliedSeconds += DT; HOLD.impulse += tip * DT; }
     if (S.pulseSteps > 0)
         S.pulseSteps--;
     S.physicsCount++;
-    S.lastFrame = { s, ns: e.s.slice(), obs, goal: e.goal, step, action: ac.a, p: ac.p, value: val, params: e.params, ...out };
-    S.liveTrace.push({ t: e.steps * DT, angle: e.s[2] * 180 / Math.PI, x: e.s[0], goal: e.goal, cmd: out.command, motor: out.motorForce, external: out.externalForce });
+    S.lastFrame = { controlIndex: HOLD.policyCalls, decisionTime: step * DT, s, ns: e.s.slice(), obs, goal: e.goal, step, action: ac.a, p: ac.p, value: val, params: e.params, ...out };
+    S.liveTrace.push({ t: e.steps * DT, angle: e.s[2] * 180 / Math.PI, x: e.s[0], goal: e.goal, cmd: out.command, motor: out.motorForce, external: out.externalForce, tip: out.tipForce, contact: out.drive.contactForce });
+    if (e.done) releaseHold();
     if (S.liveTrace.length > 600)
         S.liveTrace.shift();
     return true;
@@ -230,8 +230,8 @@ function scene() { if (isSample()) {
     const q = c.q;
     return { ...q, step: Math.floor(q.id / 16), p: S.chapter === 4 ? c.pa : c.collectionP, value: S.chapter === 4 ? c.fc.y[0] : q.oldV, reward: q.r, command: (q.action ? 1 : -1) * (q.plant?.force || 10) };
 } if (S.mode === 'replay' && S.replay)
-    return S.replay.trace[S.replayAt] || null; return { ...snapshot(), ...(S.env.lastOut || {}), plant: S.env.spec }; }
-function startReplay(trace, policySnap, name) { if (!trace?.length) {
+    return S.replay.trace[S.replayAt] || null; return { ...(S.lastFrame || snapshot()), plant: S.env.spec };  }
+function startReplay(trace, policySnap, name) { releaseHold(); if (!trace?.length) {
     toast(tr("m0030"));
     return;
 } S.replay = { trace, name }; S.replayAt = 0; S.replayAcc = 0; S.replayPlaying = false; S.replayActor = MLP.from(policySnap.actor); S.replayCritic = MLP.from(policySnap.critic); S.mode = 'replay'; S.lastTs = null; render(); }
@@ -272,12 +272,14 @@ function updateChrome() {
     const ended = !sample && !replay && S.env.done;
     $('worldOverlay').hidden = !ended;
     $('worldOverlay').textContent = ended ? (S.env.validityLimit ? tr("m0061") : S.env.terminated ? tr("m0062", Math.abs(S.env.s[0]) > 2.4 ? tr("m0063") : tr("m0064")) : tr("m0065")) + ($('autoReset').checked ? tr("m0066") : tr("m0067")) : '';
+    updateControlStatus();
     $('footerSource').textContent = sample ? tr("m0068", sourceName(), S.selected, S.sample + 1) : tr("m0069");
 }
 function render() {
     const t = CHAPTERS[S.chapter];
     $('chapterTag').textContent = `0${S.chapter} / 05 · ${t[0]}`;
-    $('chapterTitle').textContent = t[1];
+    $('chapterTitle').textContent = S.chapter === 1 ? tr('tip.title') : t[1];
+    $('recordPicker').open = isSample();
     $('lessonTitle').textContent = t[2];
     $('lessonSubtitle').textContent = t[3];
     $('lessonTag').textContent = isSample() ? `${sourceName()} I.${S.selected}` : tr("m0070");
@@ -300,15 +302,6 @@ function render() {
 }
 function emptyLesson() { $('lessonBody').innerHTML = tr("m0071"); $('support').innerHTML = tr("m0072"); $('support').className = 'support single'; }
 function flowBox(label, value, sub = '') { return `<div class="flow-box"><small>${label}</small><strong>${value}</strong>${sub ? `<em>${sub}</em>` : ''}</div>`; }
-function renderEnvironment() {
-    $('lessonBody').innerHTML = tr("m0073");
-    $('support').className = 'support';
-    $('support').innerHTML = tr("m0074", C.blue, C.green, C.amber);
-    updateEnvironment();
-}
-function updateEnvironment() { if (S.chapter !== 1)
-    return; const f = scene(); if (!f)
-    return; const o = f.obs, measured = [f.goal - o[0] * 2.4, o[1] * 2.5, o[2] * (Math.PI / 15), o[3] * 2.5, f.goal], actual = [...f.s, f.goal]; const names = [tr("m0075"), tr("m0076"), tr("m0077"), tr("m0078"), tr("m0079")]; $('observationRows').innerHTML = names.map((n, i) => `<tr><td>${n}</td><td>${F(actual[i], 3)}</td><td>${F(measured[i], 3)}</td><td class="scaled"><b>o${i + 1} = ${F(o[i], 3)}</b></td></tr>`).join(''); $('forcePath').innerHTML = [flowBox(tr("m0080"), `${F(f.command, 0)} N`), flowBox(tr("m0081"), `${F(f.motorForce ?? 0, 2)} N`, tr("m0082")), flowBox(tr("m0083"), `${F(f.externalForce ?? 0, 2)} N`), flowBox(tr("m0084"), `${F(f.force ?? (f.motorForce || 0) + (f.externalForce || 0), 2)} N`, tr("m0085"))].join('<span class="flow-arrow">→</span>'); }
 function collectionContext(c) { return S.netMode === 'delta' && !c.inferenceOnly ? { ...c, models: c.models, fa: c.fa, fc: c.fc } : { ...c, models: c.collectionModels, fa: c.collectionPass.actor, fc: c.collectionPass.critic }; }
 function signedStyle(value, max = 1) { const k = Math.min(1, Math.abs(value) / Math.max(max, 1e-12)); return { color: value >= 0 ? '#287ac1' : '#c66c2f', opacity: .055 + .3 * k, width: .45 + 1.3 * k }; }
 function liveNetworkContext() { const f = scene(); if (!f)
@@ -344,9 +337,8 @@ function renderNetworks() {
     bindNetworkClicks();
     document.querySelectorAll('[data-forward]').forEach(b => b.onclick = () => { S.forward = +b.dataset.forward; S.calcPlaying = false; renderNetworks(); });
     $('forwardPlay').onclick = () => { S.calcPlaying = !S.calcPlaying; S.calcElapsed = 0; $('forwardPlay').textContent = S.calcPlaying ? 'Ⅱ' : '▶'; };
-    $('netMode').onchange = e => { S.netMode = e.target.value; if (S.netMode === 'delta')
-        S.netLive = false; render(); };
-    $('netLive').onchange = e => { S.netLive = e.target.checked; S.netMode = 'activation'; S.lastTs = null; render(); };
+    $('netMode').onchange = e => { releaseHold(); S.netMode = e.target.value; S.netLive = false; render(); };
+    $('netLive').onchange = e => { releaseHold(); S.netLive = e.target.checked; S.netMode = 'activation'; S.lastTs = null; render(); };
     renderNeuron(c);
 }
 function bindNetworkClicks() { document.querySelectorAll('[data-neuron]').forEach(g => { const pick = () => { S.neuron = +g.dataset.neuron; S.kind = g.dataset.kind; S.weight = S.neuron * 5 + S.input; S.forward = 1; S.calcPlaying = false; renderNetworks(); }; g.onclick = pick; g.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') {
@@ -508,7 +500,7 @@ function updateTraining() {
     const names = { idle: tr("m0202"), collect: tr("m0203"), gae: tr("m0204"), optimize: tr("m0205"), evaluate: tr("m0206") };
     $('trainingCaption').textContent = S.finishRequested ? tr("m0207") : tr("m0208", names[S.phase], S.latest?.envSteps?.toLocaleString() || 0, S.running ? tr("m0209") + S.until : tr("m0210"));
     $('evaluationSummary').textContent = S.latest ? tr("m0211", F(S.latest.evaluation.mean, 1), S.latest.evaluation.reached) : '—';
-    $('pulseDescription').textContent = tr("m0212", $('pushForce').value, F(+$('pushDuration').value, 2), F(+$('pushForce').value * +$('pushDuration').value, 2));
+    $('pulseDescription').textContent = tr('tip.testBoundary');
 }
 function evaluateCurrent() {
     if (S.evalBusy || !S.applied)
@@ -588,7 +580,7 @@ function drawWorld() {
         text(g, tr("m0221"), w / 2, h / 2, C.muted, 12, 'center');
         return;
     }
-    const s = f.s, { scale, cx, ground } = geometry(w, h);
+    const s = (!isSample() ? f.ns : f.s) || f.s, { scale, cx, ground } = geometry(w, h);
     for (let x = -2.5; x <= 2.5; x += .5)
         line(g, cx + x * scale, 22, cx + x * scale, ground, '#eaf0f6');
     line(g, cx - 2.5 * scale, ground, cx + 2.5 * scale, ground, '#8fa2b3', 2);
@@ -616,7 +608,11 @@ function drawWorld() {
     g.beginPath();
     g.arc(px, pivot, 4, 0, Math.PI * 2);
     g.fill();
-    arrow(g, px, ground - 46, Math.sign(f.command ?? (f.action ? 10 : -10)) * 29, C.blue, (f.command ?? (f.action ? 10 : -10)) + ' N');
+    arrow(g, px, ground - 46, Math.sign(f.drive?.contactForce ?? f.motorForce ?? 0) * 29, C.blue, tr('tip.wheelArrow', F(f.drive?.contactForce ?? f.motorForce ?? 0, 2)));
+    if (Math.abs(f.tipForce || 0) > .00001) {
+        g.strokeStyle = C.amber; g.lineWidth = 2; g.beginPath(); g.arc(tipX, tipY, 5, 0, Math.PI * 2); g.stroke();
+        arrow(g, tipX, tipY, Math.sign(f.tipForce) * 42, C.amber, tr('tip.arrow', F(f.tipForce, 2)));
+    }
     if (Math.abs(f.externalForce || 0) > .001)
         arrow(g, px, ground - 66, Math.sign(f.externalForce) * Math.min(85, 20 + Math.abs(f.externalForce) * 3), C.amber, tr("m0223", F(f.externalForce, 1)));
     text(g, isSample() ? tr("m0224", f.env + 1, f.step) : S.mode === 'replay' ? tr("m0225", S.replayAt + 1, S.replay.trace.length) : tr("m0226", F(S.env.steps * DT, 2)), 12, 18, C.muted, 9);
@@ -654,11 +650,11 @@ function plot(canvas, series, domain, ymin, ymax, unit = '', bounds = []) {
     text(g, F(domain[0], domain[1] > 100 ? 0 : 1), L, h - 5, C.muted, 8);
     text(g, F(domain[1], domain[1] > 100 ? 0 : 1) + ' ' + unit, R, h - 5, C.muted, 8, 'right');
 }
-function drawLiveTraces() { const recorded = !isSample() && S.mode === 'replay' && S.replay; const h = recorded ? S.replay.trace.slice(Math.max(0, S.replayAt - 599), S.replayAt + 1).map(f => ({ t: (f.step + 1) * DT, angle: (f.ns || f.s)[2] * 180 / Math.PI, x: (f.ns || f.s)[0], goal: f.goal, cmd: f.command ?? (f.action ? 10 : -10), motor: f.motorForce ?? (f.action ? 10 : -10), external: f.externalForce || 0 })) : S.liveTrace; for (const id of ['forceTrace', 'testForceTrace', 'angleTrace'])
+function drawLiveTraces() { const recorded = !isSample() && S.mode === 'replay' && S.replay; const h = recorded ? S.replay.trace.slice(Math.max(0, S.replayAt - 599), S.replayAt + 1).map(f => ({ t: (f.step + 1) * DT, angle: (f.ns || f.s)[2] * 180 / Math.PI, x: (f.ns || f.s)[0], goal: f.goal, cmd: f.command ?? (f.action ? 10 : -10), motor: f.motorForce ?? (f.action ? 10 : -10), external: f.externalForce || 0, tip: f.tipForce || 0 })) : S.liveTrace; for (const id of ['forceTrace', 'testForceTrace', 'angleTrace'])
     if ($(id)) {
         $(id).dataset.source = recorded ? 'replay' : 'live';
         $(id).dataset.points = h.length;
-    } const points = key => h.map(t => [t.t, t[key]]), domain = h.length ? [h[0].t, Math.max(h[0].t + 1, h.at(-1).t)] : [0, 1]; const maxForce = Math.max(12, ...h.map(f => Math.abs(f.external)), ...h.map(f => Math.abs(f.motor))); const series = [{ points: points('cmd'), color: C.blue }, { points: points('motor'), color: C.green }, { points: points('external'), color: C.amber }]; for (const id of ['forceTrace', 'testForceTrace'])
+    } const points = key => h.map(t => [t.t, t[key]]), domain = h.length ? [h[0].t, Math.max(h[0].t + 1, h.at(-1).t)] : [0, 1]; const maxForce = Math.max(12, ...h.map(f => Math.abs(f.external)), ...h.map(f => Math.abs(f.motor)), ...h.map(f => Math.abs(f.tip || 0))); const series = [{ points: points('cmd'), color: C.blue }, { points: points('motor'), color: C.green }, { points: points('external'), color: C.amber }, { points: points('tip'), color: C.purple }]; for (const id of ['forceTrace', 'testForceTrace'])
     if ($(id))
         plot($(id), series, domain, -maxForce, maxForce, 's'); if ($('angleTrace')) {
     let max = Math.max(15, ...h.map(f => Math.abs(f.angle)));
@@ -745,16 +741,15 @@ $('samplePrev').onclick = () => selectSample(S.sample - 1);
 $('sampleNext').onclick = () => selectSample(S.sample + 1);
 $('positiveSample').onclick = () => pickSign(1);
 $('negativeSample').onclick = () => pickSign(-1);
-$('playWorld').onclick = () => { S.paused = !S.paused; S.lastTs = null; updateChrome(); };
-$('singleStep').onclick = () => { S.paused = true; S.lastTs = null; if (physics())
+$('playWorld').onclick = () => { releaseHold(); S.paused = !S.paused; S.lastTs = null; updateChrome(); };
+$('singleStep').onclick = () => { releaseHold(); S.paused = true; S.lastTs = null; if (physics())
     S.manualSteps++; updateChrome(); updateEnvironment(); drawWorld(); };
 $('resetWorld').onclick = resetWorld;
 $('target').oninput = e => setGoal(+e.target.value);
 $('targetZero').onclick = () => setGoal(0);
-$('pushLeft').onclick = () => push(-1);
-$('pushRight').onclick = () => push(1);
-$('pushForce').onchange = () => { S.pulseSteps = 0; updateTraining(); };
-$('pushDuration').onchange = updateTraining;
+// Held pointer/keyboard ownership is bound by initInteraction(). No click pulse.
+$('pushForce').onchange = () => { releaseHold(); updateControlStatus(); };
+// Scripted evaluation retains a separately labelled cart-body pulse.
 $('timeCap').onchange = () => { syncTimeCap(); S.lastTs = null; updateChrome(); };
 $('autoReset').onchange = () => { S.lastTs = null; updateChrome(); };
 $('replayBack').onclick = () => { S.replayPlaying = false; S.replayAt = Math.max(0, S.replayAt - 1); updateChrome(); };
@@ -763,7 +758,7 @@ $('replayPlay').onclick = () => { if (S.replayAt === S.replay.trace.length - 1)
     S.replayAt = 0; S.replayPlaying = !S.replayPlaying; S.replayAcc = 0; S.lastTs = null; };
 $('replaySlider').oninput = e => { S.replayAt = +e.target.value; S.replayPlaying = false; S.replayAcc = 0; updateChrome(); };
 $('leaveReplay').onclick = () => { S.mode = 'live'; S.replayPlaying = false; S.lastTs = null; render(); };
-$('helpBtn').onclick = () => { $('notes').showModal(); };
+$('helpBtn').onclick = () => { releaseHold(); $('notes').showModal(); };
 $('closeNotes').onclick = () => { $('notes').close(); };
 $('notes').addEventListener('click', e => { if (e.target === $('notes')) {
     const r = $('notes').getBoundingClientRect();
@@ -784,7 +779,7 @@ window.addEventListener('keydown', e => { if ($('notes').open || $('conditions')
         S.replayAt = clip(S.replayAt + d, 0, S.replay.trace.length - 1);
     }
     else
-        push(d);
+        beginHold(e.key, d);
 } if (e.code === 'Space' && e.target.tagName !== 'BUTTON') {
     e.preventDefault();
     if (S.mode === 'live' && !isSample())
@@ -792,10 +787,10 @@ window.addEventListener('keydown', e => { if ($('notes').open || $('conditions')
     else if (!isSample())
         $('replayPlay').click();
 } });
-document.addEventListener('visibilitychange', () => { S.hidden = document.hidden; S.lastTs = null; clearTimeout(S.timer); if (!S.hidden)
+document.addEventListener('visibilitychange', () => { releaseHold(); S.hidden = document.hidden; S.lastTs = null; clearTimeout(S.timer); if (!S.hidden)
     schedule(); updateChrome(); });
 window.addEventListener('resize', () => { drawWorld(); drawAux(); });
-window.PPOStep = Object.freeze({ status: () => ({ language: I18n.language, physicsVersion: "planar-bam/2", trainingPlant: copy(S.activeHp?.plant), testPlant: copy(S.env?.spec), trainingPlan: S.activeHp?.plan, curriculum: copy(S.currentCurriculum || null), drive: copy(S.env?.lastOut?.drive || null), netMode: S.netMode, netLive: S.netLive, chapter: S.chapter, source: S.source, record: S.selected, sample: S.sample, sampleID: calculation()?.q.id ?? null, kind: S.kind, neuron: S.neuron, weight: S.weight, forward: S.forward, update: S.update, calcPlaying: S.calcPlaying, ready: S.ready, busy: S.busy, running: S.running, latestIteration: S.latest?.iter || 0, trainingProfile: S.activeHp?.profile, appliedIteration: S.applied?.iter || 0, appliedSource: S.appliedSource, followPolicy: S.followPolicy, mode: isSample() ? 'sample' : S.mode, paused: S.paused, liveStep: S.env?.steps, liveState: S.env?.s.slice(), liveGoal: S.env?.goal, liveTerminated: S.env?.terminated, liveTruncated: S.env?.truncated, physicsSteps: S.physicsCount, manualSteps: S.manualSteps, clockSteps: S.clock.steps, wall: S.clock.wall, sim: S.clock.sim, rt: S.clock.ratio(), debt: S.clock.acc, resets: S.resets, pulseSteps: S.pulseSteps, userForce: S.env?.lastOut?.userForce || 0, autoReset: $('autoReset').checked, timeCap: $('timeCap').checked, replayAt: S.replayAt, replayPlaying: S.replayPlaying, evaluation: S.latest ? { mean: S.latest.evaluation.mean, passed: S.latest.evaluation.reached, tailError: S.latest.evaluation.tailError } : null, evalBusy: S.evalBusy, evalPolicy: policyLabelForEvaluation(), evalRows: S.evalRows ? copy(S.evalRows.map(r => ({ name: r.condition.key, passed: r.passed, mean: r.mean, reachedPulse: r.reachedPulse, completedPulse: r.completedPulse, invalid: r.invalid, failureCounts: r.failureCounts }))) : null, records: DATA.own.size }), record: (i) => DATA.own.has(i) ? copy(DATA.own.get(i)) : null, selected: () => copy(selected()), calculation: () => { const c = calculation(); return c ? { q: copy(c.q), pa: c.pa, collectionP: c.collectionP, afterP: c.afterP, loss: copy(c.loss), weight: Lesson.weight(c, S.kind, Math.min(S.weight, c.models[S.kind].p.length - 1)) } : null; } });
+window.PPOStep = Object.freeze({ status: () => ({ heldForce:heldForce(), holdSeconds:HOLD.appliedSeconds, holdImpulse:HOLD.impulse, policyCalls:HOLD.policyCalls, tipForce:S.env?.lastOut?.tipForce||0, failureReason:S.env?.lastOut?.failureReason||null, language: I18n.language, physicsVersion: "planar-bam/2", trainingPlant: copy(S.activeHp?.plant), testPlant: copy(S.env?.spec), trainingPlan: S.activeHp?.plan, curriculum: copy(S.currentCurriculum || null), drive: copy(S.env?.lastOut?.drive || null), netMode: S.netMode, netLive: S.netLive, chapter: S.chapter, source: S.source, record: S.selected, sample: S.sample, sampleID: calculation()?.q.id ?? null, kind: S.kind, neuron: S.neuron, weight: S.weight, forward: S.forward, update: S.update, calcPlaying: S.calcPlaying, ready: S.ready, busy: S.busy, running: S.running, latestIteration: S.latest?.iter || 0, trainingProfile: S.activeHp?.profile, appliedIteration: S.applied?.iter || 0, appliedSource: S.appliedSource, followPolicy: S.followPolicy, mode: isSample() ? 'sample' : S.mode, paused: S.paused, liveStep: S.env?.steps, liveState: S.env?.s.slice(), liveGoal: S.env?.goal, liveTerminated: S.env?.terminated, liveTruncated: S.env?.truncated, physicsSteps: S.physicsCount, manualSteps: S.manualSteps, clockSteps: S.clock.steps, wall: S.clock.wall, sim: S.clock.sim, rt: S.clock.ratio(), debt: S.clock.acc, resets: S.resets, pulseSteps: S.pulseSteps, userForce: S.env?.lastOut?.userForce || 0, autoReset: $('autoReset').checked, timeCap: $('timeCap').checked, replayAt: S.replayAt, replayPlaying: S.replayPlaying, evaluation: S.latest ? { mean: S.latest.evaluation.mean, passed: S.latest.evaluation.reached, tailError: S.latest.evaluation.tailError } : null, evalBusy: S.evalBusy, evalPolicy: policyLabelForEvaluation(), evalRows: S.evalRows ? copy(S.evalRows.map(r => ({ name: r.condition.key, passed: r.passed, mean: r.mean, reachedPulse: r.reachedPulse, completedPulse: r.completedPulse, invalid: r.invalid, failureCounts: r.failureCounts }))) : null, records: DATA.own.size }), record: (i) => DATA.own.has(i) ? copy(DATA.own.get(i)) : null, selected: () => copy(selected()), calculation: () => { const c = calculation(); return c ? { q: copy(c.q), pa: c.pa, collectionP: c.collectionP, afterP: c.afterP, loss: copy(c.loss), weight: Lesson.weight(c, S.kind, Math.min(S.weight, c.models[S.kind].p.length - 1)) } : null; } });
 /* EXTENSION */
 S.env = new CartPole(new RNG(20260915), { profile: 'nominal', seed: 993581, spec: P.DEFAULT_SPEC });
 S.env.enforceTimeLimit = false;
@@ -806,4 +801,5 @@ chooseRecord(EXAMPLE_FINAL);
 initializeWorker(false);
 initHardware();
 initPublicUI();
+initInteraction();
 requestAnimationFrame(animate);

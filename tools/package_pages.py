@@ -1,4 +1,4 @@
-"""Stage the already verified standalone viewer, without rebuilding its bytes."""
+"""Stage the verified build and media, without rewriting application bytes."""
 import argparse
 import hashlib
 import json
@@ -8,7 +8,7 @@ import shutil
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = ('index.html', 'viewer.ko.html', 'README.md', 'README.ko.md', 'LICENSE', 'THIRD_PARTY.md')
-DIRECTORIES = ('docs', 'archive/ko', 'licenses')
+DIRECTORIES = ('docs', 'archive', 'licenses')
 
 
 def stage(root: Path, destination: Path, revision: str) -> dict:
