@@ -1,23 +1,24 @@
 'use strict';
-// Phase-5 diagnostic for issue #2. Factorized p=.25 preserved nominal/tip and
-// nearly recovered mixed performance at I.120. Train once per seed and evaluate
-// fixed checkpoints to distinguish under-training from late-stage collapse.
+// Phase-6 diagnostic for issue #2. p=.25 at I.120 consistently scores 8/12
+// per seed on the combined mixed+tip test. Isolate physical randomization
+// families and goal classes without changing production training or reward.
 const fs=require('node:fs'),path=require('node:path');
 const ROOT=path.resolve(__dirname,'..'),E=require('../src/core'),P=require('../src/plant'),R=require('../src/robust_v2');
-const seeds=(process.env.ABLATION_SEEDS||'123,456,789').split(',').map(Number);
-const checkpoints=(process.env.ABLATION_CHECKPOINTS||'120,160,200').split(',').map(Number).sort((a,b)=>a-b),trials=Number(process.env.ABLATION_TRIALS||12),maxIter=checkpoints.at(-1);
-if(!seeds.length||seeds.some(x=>!Number.isInteger(x))||checkpoints.some(x=>!Number.isInteger(x)||x<1)||!Number.isInteger(trials)||trials<1)throw Error('Invalid trajectory configuration.');
-function evalTrials(snapshot,kind,seedBase){let success=0,invalid=0,steps=0;for(let i=0;i<trials;i++){
- const opt={seed:seedBase+i*193,goal:[.8,-.8,0][i%3],sign:i%2?1:-1};
- if(kind==='tip10')Object.assign(opt,{ratio:.10,duration:.10});
- if(kind==='mixed35')Object.assign(opt,{ratio:.35,duration:.12,mixed:true});
- const r=R.rollout(snapshot,opt);success+=r.success;invalid+=r.modelInvalid;steps+=r.steps;
-}return {success,trials,meanSteps:steps/trials,modelInvalid:invalid};}
-function score(seed,iter,snapshot,boundary,gate){const base=11_000_000+seed*1000;return {seed,iter,boundary,gate,nominal:evalTrials(snapshot,'nominal',base),tip10:evalTrials(snapshot,'tip10',base+100000),mixed35:evalTrials(snapshot,'mixed35',base+200000)};}
+const seeds=(process.env.ABLATION_SEEDS||'123,456,789').split(',').map(Number),budget=Number(process.env.ABLATION_ITERATIONS||120),trials=Number(process.env.ABLATION_TRIALS||12);
+const profiles=['nominal','model','sensor','actuator','wind','mixed'];
+if(!seeds.length||seeds.some(x=>!Number.isInteger(x))||!Number.isInteger(budget)||budget<1||!Number.isInteger(trials)||trials<1)throw Error('Invalid factor-ablation configuration.');
+function rollout(snapshot,{profile='nominal',level=.35,ratio=0,duration=.12,seed,goal,sign}){
+ const actor=E.MLP.from(snapshot.actor),env=new E.CartPole(new E.RNG(seed),{spec:snapshot.plant,profile,level:profile==='nominal'?0:level,seed:(seed+700001)>>>0});env.reset(goal);env.params.pushAmp=0;
+ const history=new R.HistoryBuffer(env.obs(),R.HISTORY_STEPS),tipAmp=R.tipForceForAuthority(env.spec,env.params,ratio),start=1,tail=[];let maxAngle=0,maxError=0,sat=0;
+ while(!env.done){const time=env.steps*E.DT,tip=time>=start&&time<start+duration?sign*tipAmp:0,ai=history.input(),ac=R.gaussianPolicy(actor,ai,true,null),out=env.stepContinuous(ac.action,0,tip);history.append(env.obs(),ac.action);maxAngle=Math.max(maxAngle,Math.abs(env.s[2]*180/Math.PI));maxError=Math.max(maxError,Math.abs(env.s[0]-goal));if(out.drive.saturated)sat++;if(env.steps>=350)tail.push(Math.abs(env.s[0]-goal));}
+ const tailError=env.steps===500&&tail.length?E.avg(tail):null,success=!env.terminated&&env.steps===500&&tailError!==null&&tailError<.25;
+ return {success,steps:env.steps,modelInvalid:!!env.validityLimit,tailError,maxAngle,maxError,saturationFraction:env.steps?sat/env.steps:0,params:{mc:env.params.mc,mp:env.params.mp,l:env.params.l,gain:env.params.gain,tau:env.params.tau,delay:env.params.delay,friction:env.params.friction,bias:env.params.bias,noise:env.params.noise}};
+}
+function evaluate(snapshot,profile,withTip,seedBase){const rows=[];for(let i=0;i<trials;i++){const goal=[.8,-.8,0][i%3],sign=i%2?1:-1,r=rollout(snapshot,{profile,level:.35,ratio:withTip?.35:0,duration:.12,seed:seedBase+i*193,goal,sign});rows.push({i,goal,sign,...r});}return {profile,tipAuthority:withTip?.35:0,trials,successes:rows.filter(x=>x.success).length,modelInvalid:rows.filter(x=>x.modelInvalid).length,meanSteps:E.avg(rows.map(x=>x.steps)),byGoal:[.8,-.8,0].map(goal=>{const q=rows.filter(x=>x.goal===goal);return {goal,successes:q.filter(x=>x.success).length,trials:q.length,meanSteps:E.avg(q.map(x=>x.steps)),tailErrors:q.map(x=>x.tailError)};}),rows};}
 const runs=[];
-for(const seed of seeds){console.log(`seed ${seed}: p=.25 to I.${maxIter}`);const t=new R.Trainer(seed,{plant:P.DEFAULT_SPEC,domainRandomizationProb:.25}),points=[];for(let i=1;i<=maxIter;i++){t.iteration();if(checkpoints.includes(i)){const s=score(seed,i,t.snapshot(),t.boundary.value,t.gateResult);points.push(s);console.log(`  I.${i} boundary=${s.boundary.toFixed(2)} nominal=${s.nominal.success}/${trials} tip=${s.tip10.success}/${trials} mixed=${s.mixed35.success}/${trials}`);}}runs.push({seed,points});}
-function aggregate(iter,key){const xs=runs.map(r=>r.points.find(p=>p.iter===iter));return {successes:xs.reduce((s,r)=>s+r[key].success,0),trials:xs.reduce((s,r)=>s+r[key].trials,0),modelInvalid:xs.reduce((s,r)=>s+r[key].modelInvalid,0),meanSteps:xs.reduce((s,r)=>s+r[key].meanSteps,0)/xs.length};}
-const trajectory=checkpoints.map(iter=>({iter,nominal:aggregate(iter,'nominal'),tip10:aggregate(iter,'tip10'),mixed35:aggregate(iter,'mixed35'),boundaries:runs.map(r=>r.points.find(p=>p.iter===iter).boundary),perSeed:runs.map(r=>{const p=r.points.find(x=>x.iter===iter);return {seed:r.seed,nominal:p.nominal.success,tip10:p.tip10.success,mixed35:p.mixed35.success,boundary:p.boundary};})}));
-const report={schema:'cartpole-robust-v2-mixed-ablation/v5',generatedAt:new Date().toISOString(),method:{seeds,checkpoints,trialsPerCondition:trials,domainRandomizationProb:.25,selection:'No checkpoint selected; all predeclared checkpoints are reported on identical held-out seeds.',conditions:{nominal:'ratio 0',tip10:'authority 0.10, 0.10 s',mixed35:'mixed physical randomization + authority 0.35, 0.12 s'}},runs,trajectory};
+for(const seed of seeds){console.log(`seed ${seed}: train p=.25 to I.${budget}`);const t=new R.Trainer(seed,{plant:P.DEFAULT_SPEC,domainRandomizationProb:.25});for(let i=0;i<budget;i++)t.iteration();const snapshot=t.snapshot(),base=12_000_000+seed*1000,conditions=[];for(let p=0;p<profiles.length;p++)for(const tip of [false,true]){const r=evaluate(snapshot,profiles[p],tip,base+p*100000+(tip?50000:0));conditions.push(r);console.log(`  ${profiles[p]} ${tip?'tip35':'no-tip'}: ${r.successes}/${trials}; goals ${r.byGoal.map(g=>`${g.goal}:${g.successes}/${g.trials}`).join(' ')}`);}runs.push({seed,boundary:t.boundary.value,conditions});}
+function aggregate(profile,tip){const xs=runs.flatMap(r=>r.conditions.filter(c=>c.profile===profile&&c.tipAuthority===(tip?.35:0)));return {profile,tipAuthority:tip?.35:0,successes:xs.reduce((s,x)=>s+x.successes,0),trials:xs.reduce((s,x)=>s+x.trials,0),modelInvalid:xs.reduce((s,x)=>s+x.modelInvalid,0),meanSteps:E.avg(xs.map(x=>x.meanSteps)),byGoal:[.8,-.8,0].map(goal=>{const gs=xs.flatMap(x=>x.byGoal.filter(g=>g.goal===goal));return {goal,successes:gs.reduce((s,g)=>s+g.successes,0),trials:gs.reduce((s,g)=>s+g.trials,0),meanSteps:E.avg(gs.map(g=>g.meanSteps))};})};}
+const aggregateRows=profiles.flatMap(profile=>[false,true].map(tip=>aggregate(profile,tip)));
+const report={schema:'cartpole-robust-v2-mixed-ablation/v6',generatedAt:new Date().toISOString(),method:{seeds,budgetIterations:budget,trialsPerCondition:trials,domainRandomizationProb:.25,domainLevel:.35,tipAuthority:.35,note:'Each profile uses independent held-out seeds. Built-in repeated push is disabled so the only exogenous impulse in +tip conditions is the explicit pole-tip pulse.'},runs,aggregate:aggregateRows};
 fs.mkdirSync(path.join(ROOT,'evidence'),{recursive:true});fs.writeFileSync(path.join(ROOT,'evidence','mixed_v2_ablation.json'),JSON.stringify(report,null,2)+'\n');
-console.log(JSON.stringify(trajectory,null,2));
+console.log(JSON.stringify(aggregateRows,null,2));
