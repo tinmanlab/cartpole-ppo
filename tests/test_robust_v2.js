@@ -69,6 +69,21 @@ test('disturbance schedules respect nominal mixture and authority boundary',()=>
   assert.ok(counts.tipImpulse>190&&counts.tipImpulse<310);
 });
 
+test('dynamics randomization is factorized from disturbance family while nominal stays clean',()=>{
+  const t=new R.Trainer(2468,{plant:P.DEFAULT_SPEC});
+  assert.equal(t.hp.domainRandomizationProb,.5);
+  const slot=t.slots[0];let crossFamily=0,nominalRandomized=0,randomized=0;
+  for(let i=0;i<500;i++){
+    t._resetSlot(slot);
+    if(slot.domainRandomized)randomized++;
+    if(slot.family==='nominal'&&slot.domainRandomized)nominalRandomized++;
+    if(!['nominal','mixed'].includes(slot.family)&&slot.domainRandomized)crossFamily++;
+  }
+  assert.equal(nominalRandomized,0);
+  assert.ok(crossFamily>80,'non-mixed disturbances must sometimes carry dynamics randomization');
+  assert.ok(randomized>150&&randomized<350,'domain-randomized exposure should be substantial but not universal');
+});
+
 test('adaptive boundary promotes only after two good gates and contracts on collapse',()=>{
   const c=new R.AdaptiveBoundary();
   c.grade({nominal:7,tip:6,mixed:6,count:8});assert.equal(c.index,0);assert.equal(c.streak,1);
@@ -88,6 +103,13 @@ test('robust checkpoint reproduces the next iteration in one runtime',()=>{
   const t=new R.Trainer(321,{plant:P.DEFAULT_SPEC});t.iteration();const cp=t.checkpoint();
   const a=R.restoreTrainer(cp),b=R.restoreTrainer(cp);a.iteration();b.iteration();
   assert.deepEqual(a.snapshot(),b.snapshot());
+});
+
+test('legacy robust-v2 checkpoint without factorized-DR field keeps old future reset semantics',()=>{
+  const t=new R.Trainer(654,{plant:P.DEFAULT_SPEC});t.iteration();const cp=t.checkpoint();
+  delete cp.hp.domainRandomizationProb;
+  const restored=R.restoreTrainer(cp);
+  assert.equal(restored.hp.domainRandomizationProb,0);
 });
 
 test('reduced robustness envelope marks ratios above one as stress OOD',()=>{
