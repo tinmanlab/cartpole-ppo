@@ -17,7 +17,8 @@ const RobustV2=(()=>{
  const HISTORY_STEPS=5;
  const BOUNDARIES=[.10,.20,.35,.50,.65,.80];
  const MIXTURE={nominal:.30,tipImpulse:.25,tipHold:.10,bodyImpulse:.15,mixed:.20};
- const DEFAULT_HP={gamma:.99,lambda:.95,epsilon:.2,actorLR:.0003,criticLR:.001,entropy:.002,epochs:4,batch:128,n:16,horizon:128,history:HISTORY_STEPS,plant:{...P.DEFAULT_SPEC},gateEvery:5,domainRandomizationProb:.20};
+ const STRATIFIED_FAMILIES=['nominal','nominal','nominal','nominal','nominal','tipImpulse','tipImpulse','tipImpulse','tipImpulse','tipHold','tipHold','bodyImpulse','bodyImpulse','mixed','mixed','mixed'];
+ const DEFAULT_HP={gamma:.99,lambda:.95,epsilon:.2,actorLR:.0003,criticLR:.001,entropy:.002,epochs:4,batch:128,n:16,horizon:128,history:HISTORY_STEPS,plant:{...P.DEFAULT_SPEC},gateEvery:5,domainRandomizationProb:.25,stratifiedFamilies:true};
 
  // Reuse-first adapter: the legacy step is the sole physical implementation.
  // Scaling spec.force for this synchronous call produces an exact continuous
@@ -119,12 +120,13 @@ const RobustV2=(()=>{
   constructor(seed=123,hp={}){
    this.seed=seed>>>0;this.rng=new Random(this.seed);this.hp={...DEFAULT_HP,...hp,plant:P.validateSpec(hp.plant||DEFAULT_HP.plant)};this.hp.history=HISTORY_STEPS;
    if(!finite(this.hp.domainRandomizationProb)||this.hp.domainRandomizationProb<0||this.hp.domainRandomizationProb>1)throw Error('domainRandomizationProb must be in [0,1].');
+   if(typeof this.hp.stratifiedFamilies!=='boolean')throw Error('stratifiedFamilies must be boolean.');
    this.actor=new NN(this.rng,30,32,2,.02);this.critic=new NN(this.rng,44,64,1,.1);this.initial=Array.from(this.actor.p);this.boundary=new AdaptiveBoundary();this.iter=0;this.steps=0;this.episodes=0;this.scores=[];this.last={actorGrad:0,criticGrad:0,entropy:0,clipFraction:0,piLoss:0,valueLoss:0,delta:0,adamSteps:0};this.gateResult=null;
    this.slots=Array.from({length:this.hp.n},(_,i)=>this._makeSlot(i));
   }
-  _makeSlot(i){const env=new CP(new Random((this.seed+1009+i*7919)>>>0),{spec:this.hp.plant,profile:'nominal',seed:(this.seed+700001+i*3571)>>>0}),slot={env,history:null,schedule:null,prevAction:0,family:'nominal',domainRandomized:false};this._resetSlot(slot);return slot;}
+  _makeSlot(i){const env=new CP(new Random((this.seed+1009+i*7919)>>>0),{spec:this.hp.plant,profile:'nominal',seed:(this.seed+700001+i*3571)>>>0}),lane=this.hp.stratifiedFamilies?STRATIFIED_FAMILIES[i]:null,slot={env,history:null,schedule:null,prevAction:0,family:lane||'nominal',lane,domainRandomized:false};this._resetSlot(slot,lane);return slot;}
   _resetSlot(slot,family=null){
-   family=family||sampleFamily(this.rng);slot.family=family;
+   family=family||slot.lane||sampleFamily(this.rng);slot.family=family;
    const factorized=family!=='nominal'&&family!=='mixed'&&this.hp.domainRandomizationProb>0&&this.rng.uniform()<this.hp.domainRandomizationProb,randomized=family==='mixed'||factorized;
    slot.domainRandomized=randomized;slot.env.configure(randomized?'mixed':'nominal',randomized?this.boundary.value:0);slot.env.reset(2*this.rng.uniform()-1);if(randomized)slot.env.params.pushAmp=0;
    slot.schedule=makeEpisodeSchedule(this.rng,slot.env.spec,slot.env.params,this.boundary.value,family);slot.prevAction=0;slot.history=new HistoryBuffer(slot.env.obs(),HISTORY_STEPS);
@@ -152,12 +154,12 @@ const RobustV2=(()=>{
   iteration(){const rec=this.collect();this.optimize(rec.data);if(this.iter%this.hp.gateEvery===0)this.gateResult=this.gate();return rec;}
   gate(){const base=(this.seed+900000+this.iter*1009)>>>0,nom=evaluateGateFamily(this.snapshot(),'nominal',this.boundary.value,8,base),tip=evaluateGateFamily(this.snapshot(),'tip',this.boundary.value,8,base+10000),mix=evaluateGateFamily(this.snapshot(),'mixed',this.boundary.value,8,base+20000),grade=this.boundary.grade({nominal:nom,tip,mixed:mix,count:8});return {...grade,nominal:nom,tip,mixed:mix};}
   snapshot(){return {schema:'cartpole-robust-v2-policy/v1',method:'robust-v2',iter:this.iter,plant:clone(this.hp.plant),hp:clone(this.hp),boundary:this.boundary.snapshot(),actor:this.actor.snapshot(),critic:this.critic.snapshot()};}
-  checkpoint(){return {schema:'cartpole-robust-v2-checkpoint/v1',seed:this.seed,hp:clone(this.hp),iter:this.iter,steps:this.steps,episodes:this.episodes,scores:this.scores.slice(),initial:this.initial.slice(),last:clone(this.last),gateResult:clone(this.gateResult),rng:rngState(this.rng),boundary:this.boundary.snapshot(),actor:this.actor.optimizerSnapshot(),critic:this.critic.optimizerSnapshot(),slots:this.slots.map(s=>{const {rng,noiseRng,...env}=s.env;return {env:clone(env),rng:rngState(rng),noiseRng:rngState(noiseRng),history:s.history.snapshot(),schedule:clone(s.schedule),prevAction:s.prevAction,family:s.family,domainRandomized:s.domainRandomized};})};}
+  checkpoint(){return {schema:'cartpole-robust-v2-checkpoint/v1',seed:this.seed,hp:clone(this.hp),iter:this.iter,steps:this.steps,episodes:this.episodes,scores:this.scores.slice(),initial:this.initial.slice(),last:clone(this.last),gateResult:clone(this.gateResult),rng:rngState(this.rng),boundary:this.boundary.snapshot(),actor:this.actor.optimizerSnapshot(),critic:this.critic.optimizerSnapshot(),slots:this.slots.map(s=>{const {rng,noiseRng,...env}=s.env;return {env:clone(env),rng:rngState(rng),noiseRng:rngState(noiseRng),history:s.history.snapshot(),schedule:clone(s.schedule),prevAction:s.prevAction,family:s.family,lane:s.lane,domainRandomized:s.domainRandomized};})};}
  }
 
  function restoreTrainer(cp){
-  if(cp?.schema!=='cartpole-robust-v2-checkpoint/v1')throw Error('Robust PPO v2 requires its own v1 checkpoint.');const hp=clone(cp.hp);if(!Object.hasOwn(hp,'domainRandomizationProb'))hp.domainRandomizationProb=0;const t=new Trainer(cp.seed,hp);t.iter=cp.iter;t.steps=cp.steps;t.episodes=cp.episodes;t.scores=cp.scores.slice();t.initial=cp.initial.slice();t.last=clone(cp.last);t.gateResult=clone(cp.gateResult);t.rng=restoreRng(cp.rng);t.boundary=new AdaptiveBoundary(cp.boundary);t.actor=NN.from(cp.actor);t.critic=NN.from(cp.critic);
-  if(!Array.isArray(cp.slots)||cp.slots.length!==t.hp.n)throw Error('Invalid robust slot checkpoint.');t.slots=cp.slots.map(s=>{const env=Object.create(CP.prototype);Object.assign(env,clone(s.env));env.rng=restoreRng(s.rng);env.noiseRng=restoreRng(s.noiseRng);return {env,history:HistoryBuffer.from(s.history),schedule:clone(s.schedule),prevAction:s.prevAction,family:s.family,domainRandomized:s.domainRandomized??s.env.profile==='mixed'};});return t;
+  if(cp?.schema!=='cartpole-robust-v2-checkpoint/v1')throw Error('Robust PPO v2 requires its own v1 checkpoint.');const hp=clone(cp.hp);if(!Object.hasOwn(hp,'domainRandomizationProb'))hp.domainRandomizationProb=0;if(!Object.hasOwn(hp,'stratifiedFamilies'))hp.stratifiedFamilies=false;const t=new Trainer(cp.seed,hp);t.iter=cp.iter;t.steps=cp.steps;t.episodes=cp.episodes;t.scores=cp.scores.slice();t.initial=cp.initial.slice();t.last=clone(cp.last);t.gateResult=clone(cp.gateResult);t.rng=restoreRng(cp.rng);t.boundary=new AdaptiveBoundary(cp.boundary);t.actor=NN.from(cp.actor);t.critic=NN.from(cp.critic);
+  if(!Array.isArray(cp.slots)||cp.slots.length!==t.hp.n)throw Error('Invalid robust slot checkpoint.');t.slots=cp.slots.map(s=>{const env=Object.create(CP.prototype);Object.assign(env,clone(s.env));env.rng=restoreRng(s.rng);env.noiseRng=restoreRng(s.noiseRng);return {env,history:HistoryBuffer.from(s.history),schedule:clone(s.schedule),prevAction:s.prevAction,family:s.family,lane:s.lane??null,domainRandomized:s.domainRandomized??s.env.profile==='mixed'};});return t;
  }
 
  function rollout(snapshot,options={}){
@@ -174,6 +176,6 @@ const RobustV2=(()=>{
   return rows;
  }
 
- return {HISTORY_STEPS,BOUNDARIES,MIXTURE,DEFAULT_HP,HistoryBuffer,gaussianTerms,gaussianPpoLoss,gaussianPpoDerivatives,gaussianPolicy,availableWheelForce,tipAuthorityRatio,tipForceForAuthority,privilegedInput,sampleFamily,makeEpisodeSchedule,sampleEpisodeDisturbance,forcesAt,AdaptiveBoundary,robustReward,Trainer,restoreTrainer,rollout,evaluateEnvelope,evaluateGateFamily};
+ return {HISTORY_STEPS,BOUNDARIES,MIXTURE,STRATIFIED_FAMILIES,DEFAULT_HP,HistoryBuffer,gaussianTerms,gaussianPpoLoss,gaussianPpoDerivatives,gaussianPolicy,availableWheelForce,tipAuthorityRatio,tipForceForAuthority,privilegedInput,sampleFamily,makeEpisodeSchedule,sampleEpisodeDisturbance,forcesAt,AdaptiveBoundary,robustReward,Trainer,restoreTrainer,rollout,evaluateEnvelope,evaluateGateFamily};
 })();
 if(typeof module!=='undefined')module.exports=RobustV2;
