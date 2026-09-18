@@ -17,7 +17,7 @@ const RobustV2=(()=>{
  const HISTORY_STEPS=5;
  const BOUNDARIES=[.10,.20,.35,.50,.65,.80];
  const MIXTURE={nominal:.30,tipImpulse:.25,tipHold:.10,bodyImpulse:.15,mixed:.20};
- const DEFAULT_HP={gamma:.99,lambda:.95,epsilon:.2,actorLR:.0003,criticLR:.001,entropy:.002,epochs:4,batch:128,n:16,horizon:128,history:HISTORY_STEPS,plant:{...P.DEFAULT_SPEC},gateEvery:5,domainRandomizationProb:.50};
+ const DEFAULT_HP={gamma:.99,lambda:.95,epsilon:.2,actorLR:.0003,criticLR:.001,entropy:.002,epochs:4,batch:128,n:16,horizon:128,history:HISTORY_STEPS,plant:{...P.DEFAULT_SPEC},gateEvery:5,domainRandomizationProb:.25};
 
  // Reuse-first adapter: the legacy step is the sole physical implementation.
  // Scaling spec.force for this synchronous call produces an exact continuous
