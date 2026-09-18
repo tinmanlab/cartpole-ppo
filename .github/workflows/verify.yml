@@ -66,8 +66,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Run foundation validation three-seed qualification
-        run: ROBUST_SEEDS=7777,8888,9999 node tools/evaluate_robust_v2.js
+      - name: Run 240-iteration foundation validation
+        run: ROBUST_SEEDS=7777,8888,9999 ROBUST_ITERATIONS=240 node tools/evaluate_robust_v2.js
       - name: Print qualification summary
         if: always()
         run: |
