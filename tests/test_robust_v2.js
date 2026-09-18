@@ -69,24 +69,18 @@ test('disturbance schedules respect nominal mixture and authority boundary',()=>
   assert.ok(counts.tipImpulse>190&&counts.tipImpulse<310);
 });
 
-test('training families are stratified across 16 lanes and factorized DR keeps nominal clean',()=>{
+test('foundation gate unlocks stable stratified lanes before factorized DR',()=>{
   const t=new R.Trainer(2468,{plant:P.DEFAULT_SPEC});
-  assert.equal(t.hp.domainRandomizationProb,.25);
-  assert.equal(t.hp.stratifiedFamilies,true);
+  assert.equal(t.hp.domainRandomizationProb,.25);assert.equal(t.hp.stratifiedFamilies,true);assert.equal(t.foundation.active,true);
+  assert.ok(t.slots.every(s=>s.lane==='nominal'&&s.family==='nominal'));
+  t._gradeFoundation(7,8);assert.equal(t.foundation.active,true);
+  t._gradeFoundation(7,8);assert.equal(t.foundation.active,false);
   assert.deepEqual(t.slots.map(s=>s.lane),R.STRATIFIED_FAMILIES);
   const counts=Object.fromEntries(Object.keys(R.MIXTURE).map(k=>[k,t.slots.filter(s=>s.lane===k).length]));
   assert.deepEqual(counts,{nominal:5,tipImpulse:4,tipHold:2,bodyImpulse:2,mixed:3});
   let crossFamily=0,nominalRandomized=0,randomized=0;
-  for(let i=0;i<100;i++)for(const slot of t.slots){
-    t._resetSlot(slot);
-    assert.equal(slot.family,slot.lane);
-    if(slot.domainRandomized)randomized++;
-    if(slot.family==='nominal'&&slot.domainRandomized)nominalRandomized++;
-    if(!['nominal','mixed'].includes(slot.family)&&slot.domainRandomized)crossFamily++;
-  }
-  assert.equal(nominalRandomized,0);
-  assert.ok(crossFamily>130&&crossFamily<270,'factorized DR should cover about 25% of non-mixed disturbed lanes');
-  assert.ok(randomized>420&&randomized<600,'mixed lanes plus factorized DR should create stable but non-universal dynamics exposure');
+  for(let i=0;i<100;i++)for(const slot of t.slots){t._resetSlot(slot);assert.equal(slot.family,slot.lane);if(slot.domainRandomized)randomized++;if(slot.family==='nominal'&&slot.domainRandomized)nominalRandomized++;if(!['nominal','mixed'].includes(slot.family)&&slot.domainRandomized)crossFamily++;}
+  assert.equal(nominalRandomized,0);assert.ok(crossFamily>130&&crossFamily<270);assert.ok(randomized>420&&randomized<600);
 });
 
 test('adaptive boundary promotes only after two good gates and contracts on collapse',()=>{
@@ -112,9 +106,9 @@ test('robust checkpoint reproduces the next iteration in one runtime',()=>{
 
 test('legacy robust-v2 checkpoint without factorized-DR field keeps old future reset semantics',()=>{
   const t=new R.Trainer(654,{plant:P.DEFAULT_SPEC});t.iteration();const cp=t.checkpoint();
-  delete cp.hp.domainRandomizationProb;delete cp.hp.stratifiedFamilies;cp.slots.forEach(s=>delete s.lane);
+  delete cp.hp.domainRandomizationProb;delete cp.hp.stratifiedFamilies;delete cp.hp.foundationCurriculum;delete cp.hp.foundationGateStreak;delete cp.foundation;cp.slots.forEach(s=>delete s.lane);
   const restored=R.restoreTrainer(cp);
-  assert.equal(restored.hp.domainRandomizationProb,0);assert.equal(restored.hp.stratifiedFamilies,false);assert.ok(restored.slots.every(s=>s.lane===null));
+  assert.equal(restored.hp.domainRandomizationProb,0);assert.equal(restored.hp.stratifiedFamilies,false);assert.equal(restored.hp.foundationCurriculum,false);assert.equal(restored.foundation.active,false);assert.ok(restored.slots.every(s=>s.lane===null));
 });
 
 test('reduced robustness envelope marks ratios above one as stress OOD',()=>{
