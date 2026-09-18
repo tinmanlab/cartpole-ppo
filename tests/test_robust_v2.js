@@ -71,7 +71,7 @@ test('disturbance schedules respect nominal mixture and authority boundary',()=>
 
 test('dynamics randomization is factorized from disturbance family while nominal stays clean',()=>{
   const t=new R.Trainer(2468,{plant:P.DEFAULT_SPEC});
-  assert.equal(t.hp.domainRandomizationProb,.5);
+  assert.equal(t.hp.domainRandomizationProb,.25);
   const slot=t.slots[0];let crossFamily=0,nominalRandomized=0,randomized=0;
   for(let i=0;i<500;i++){
     t._resetSlot(slot);
@@ -80,8 +80,8 @@ test('dynamics randomization is factorized from disturbance family while nominal
     if(!['nominal','mixed'].includes(slot.family)&&slot.domainRandomized)crossFamily++;
   }
   assert.equal(nominalRandomized,0);
-  assert.ok(crossFamily>80,'non-mixed disturbances must sometimes carry dynamics randomization');
-  assert.ok(randomized>150&&randomized<350,'domain-randomized exposure should be substantial but not universal');
+  assert.ok(crossFamily>35,'non-mixed disturbances must sometimes carry dynamics randomization');
+  assert.ok(randomized>110&&randomized<260,'domain-randomized exposure should be substantial but not universal');
 });
 
 test('adaptive boundary promotes only after two good gates and contracts on collapse',()=>{
