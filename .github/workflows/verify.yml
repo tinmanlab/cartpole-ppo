@@ -66,8 +66,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Run frozen holdout three-seed qualification
-        run: ROBUST_SEEDS=4444,5555,6666 node tools/evaluate_robust_v2.js
+      - name: Run foundation validation three-seed qualification
+        run: ROBUST_SEEDS=7777,8888,9999 node tools/evaluate_robust_v2.js
       - name: Print qualification summary
         if: always()
         run: |
