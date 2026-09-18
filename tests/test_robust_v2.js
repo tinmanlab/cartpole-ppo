@@ -71,7 +71,7 @@ test('disturbance schedules respect nominal mixture and authority boundary',()=>
 
 test('dynamics randomization is factorized from disturbance family while nominal stays clean',()=>{
   const t=new R.Trainer(2468,{plant:P.DEFAULT_SPEC});
-  assert.equal(t.hp.domainRandomizationProb,.25);
+  assert.equal(t.hp.domainRandomizationProb,.20);
   const slot=t.slots[0];let crossFamily=0,nominalRandomized=0,randomized=0;
   for(let i=0;i<500;i++){
     t._resetSlot(slot);
