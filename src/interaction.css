@@ -41,3 +41,4 @@
 .robust-envelope td.good { background:#edf7f1; color:#175e43; }
 .robust-envelope .stress { background:#f6f2eb; color:#7c5c32; }
 @media (max-width:1100px){.robust-kpis{grid-template-columns:1fr}.robust-v2>summary{display:block}.robust-v2>summary span{display:block;text-align:left;margin-top:3px}}
+@media (max-width:600px){.decision-chain{grid-template-columns:1fr}.decision-chain .flow-arrow{transform:rotate(90deg)}}

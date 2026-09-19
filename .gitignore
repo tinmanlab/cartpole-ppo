@@ -18,3 +18,5 @@ evidence/public-pages/
 /index.html
 /viewer.ko.html
 evidence/tip-browser/
+qa-output/
+.omc/

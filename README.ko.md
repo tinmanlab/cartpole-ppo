@@ -2,7 +2,7 @@
 
 **막대 상단을 밀어 보고, 제어기의 반응과 실제 신경망 계산을 연결합니다.**
 
-**[실시간 시뮬레이션 바로 실행](https://tinmanlab.github.io/cartpole_PPO/index.html?lang=ko)** · **[English viewer](https://tinmanlab.github.io/cartpole_PPO/?lang=en)** · [English README](README.md)
+**[실시간 시뮬레이션 바로 실행](https://tinmanlab.github.io/cartpole-ppo/index.html?lang=ko)** · **[English viewer](https://tinmanlab.github.io/cartpole-ppo/?lang=en)** · [English README](README.md)
 
 하나의 CartPole과 다섯 단계로 실제 물리·PPO 학습을 살펴보는 브라우저 실험실입니다. GPU·계정·API 키·학습 서버가 필요하지 않습니다. 한·영 전환은 같은 엔진의 표시만 바꾸며 실험을 초기화하지 않습니다.
 
@@ -31,9 +31,9 @@ XL330·MX64·MX106은 고정된 [Rhoban/BAM](https://github.com/Rhoban/bam)의 �
 
 ## 이전 사용 영상
 
-[![이전 버전의 실제 사용 영상](docs/media/demo.gif)](https://tinmanlab.github.io/cartpole_PPO/docs/demo.html)
+[![이전 버전의 실제 사용 영상](docs/media/demo.gif)](https://tinmanlab.github.io/cartpole-ppo/docs/demo.html)
 
-[영상 재생](https://tinmanlab.github.io/cartpole_PPO/docs/demo.html). 신경망·PPO 사용 흐름을 담은 실제 녹화입니다. **상단 누름 유지 기능 이전 영상**으로, 카트 본체에 시간 제한 펄스를 가하는 장면이 나옵니다. 현재 조작의 녹화로 오해하지 않도록 표시했습니다. 원본 영문 HTML은 `archive/en/body-pulse.v2.html`, 이전 한국어본은 `archive/ko/`에 보관합니다.
+[영상 재생](https://tinmanlab.github.io/cartpole-ppo/docs/demo.html). 신경망·PPO 사용 흐름을 담은 실제 녹화입니다. **상단 누름 유지 기능 이전 영상**으로, 카트 본체에 시간 제한 펄스를 가하는 장면이 나옵니다. 현재 조작의 녹화로 오해하지 않도록 표시했습니다. 원본 영문 HTML은 `archive/en/body-pulse.v2.html`, 이전 한국어본은 `archive/ko/`에 보관합니다.
 
 ## 실행과 검증
 

@@ -2,7 +2,7 @@
 
 **Push the pole. Watch the controller respond. Follow one real decision into the network.**
 
-**[Open interactive simulation →](https://tinmanlab.github.io/cartpole_PPO/?lang=en)** · **[한국어로 실행](https://tinmanlab.github.io/cartpole_PPO/index.html?lang=ko)** · [한국어 안내](README.ko.md)
+**[Open interactive simulation →](https://tinmanlab.github.io/cartpole-ppo/?lang=en)** · **[한국어로 실행](https://tinmanlab.github.io/cartpole-ppo/index.html?lang=ko)** · [한국어 안내](README.ko.md)
 
 One CartPole, five connected lessons, real PPO in your browser. No GPU, account, API key or learning backend. English and Korean share the same engine; switching language does not reset your experiment.
 
@@ -32,9 +32,9 @@ The cart is a planar reduced-order model, not a full mobile robot. The wheel mes
 
 ## Earlier walkthrough
 
-[![Earlier browser walkthrough; the current viewer uses held pole-tip pushes](docs/media/demo.gif)](https://tinmanlab.github.io/cartpole_PPO/docs/demo.html)
+[![Earlier browser walkthrough; the current viewer uses held pole-tip pushes](docs/media/demo.gif)](https://tinmanlab.github.io/cartpole-ppo/docs/demo.html)
 
-**[Watch the earlier walkthrough](https://tinmanlab.github.io/cartpole_PPO/docs/demo.html).** This real recording predates held-tip input and shows timed cart-body pulses. It remains useful for the network/PPO lessons, but is **not** footage of the current interaction. Its exact English source is preserved in `archive/en/body-pulse.v2.html`; the previous Korean version remains in `archive/ko/`.
+**[Watch the earlier walkthrough](https://tinmanlab.github.io/cartpole-ppo/docs/demo.html).** This real recording predates held-tip input and shows timed cart-body pulses. It remains useful for the network/PPO lessons, but is **not** footage of the current interaction. Its exact English source is preserved in `archive/en/body-pulse.v2.html`; the previous Korean version remains in `archive/ko/`.
 
 ## Online, offline and verification
 
