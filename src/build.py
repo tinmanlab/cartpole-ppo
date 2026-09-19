@@ -37,7 +37,7 @@ def catalog() -> str:
 
 def build(language: str = 'en') -> str:
     robust_extension = 'const ROBUST_WORKER_SOURCE = ' + json.dumps(read('robust_worker.js'), ensure_ascii=False) + ';\n' + read('robust_ui.js')
-    extension = '\n'.join(read(name) for name in ('extension.js', 'locale_refresh.js', 'ui_extra.js', 'interaction.js')) + '\n' + robust_extension
+    extension = '\n'.join(read(name) for name in ('extension.js', 'locale_refresh.js', 'ui_extra.js', 'interaction.js', 'follow_experience.js')) + '\n' + robust_extension
     if read('app.js').count('/* EXTENSION */') != 1:
         raise ValueError('The app must have exactly one extension slot.')
     parts = {

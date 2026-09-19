@@ -44,6 +44,7 @@ jobs:
           python tests/test_tip_browser.py --base-url http://127.0.0.1:8765/_site/ --output evidence/local-pages/tip
           python tests/test_robust_browser.py --base-url http://127.0.0.1:8765/_site/ --output evidence/local-pages/robust-v2
           python tests/test_responsive_browser.py --base-url http://127.0.0.1:8765/_site/ --output evidence/local-pages/responsive
+          python tests/test_follow_experience_browser.py --base-url http://127.0.0.1:8765/_site/ --output evidence/local-pages/follow-experience
       - name: Save pre-deployment browser evidence
         if: always()
         uses: actions/upload-artifact@v4
