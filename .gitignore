@@ -18,5 +18,7 @@ evidence/public-pages/
 /index.html
 /viewer.ko.html
 evidence/tip-browser/
+evidence/robust-v2-browser/
+evidence/responsive-browser/
 qa-output/
 .omc/

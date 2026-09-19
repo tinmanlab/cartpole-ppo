@@ -43,6 +43,7 @@ jobs:
           python tests/test_pages_live.py --base-url http://127.0.0.1:8765/_site/ --expected-revision "$GITHUB_SHA" --wait-seconds 30 --output evidence/local-pages
           python tests/test_tip_browser.py --base-url http://127.0.0.1:8765/_site/ --output evidence/local-pages/tip
           python tests/test_robust_browser.py --base-url http://127.0.0.1:8765/_site/ --output evidence/local-pages/robust-v2
+          python tests/test_responsive_browser.py --base-url http://127.0.0.1:8765/_site/ --output evidence/local-pages/responsive
       - name: Save pre-deployment browser evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -50,6 +51,14 @@ jobs:
           name: local-pages-${{ github.sha }}
           path: evidence/local-pages/
           if-no-files-found: ignore
+          retention-days: 14
+      - name: Save a downloadable preview of the staged candidate for PR review
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-preview-${{ github.sha }}
+          path: _site
+          if-no-files-found: error
           retention-days: 14
       - name: Upload verified Pages artifact
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
