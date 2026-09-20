@@ -267,6 +267,23 @@ def _run_checks(p):
             box_texts = p.eval_on_selector_all(f'[data-follow-stage="{stage}"] .bar-row .value, [data-follow-stage="{stage}"] b', 'es=>es.map(e=>parseFloat(getComputedStyle(e).fontSize))')
             check(f'{w}px {stage}: essential readout text is >=14px', not box_texts or all(s >= 14 for s in box_texts), box_texts)
             check(f'{w}px {stage}: panel content actually rendered (non-empty)', len(rects) > 0)
+            if stage == 'input':
+                # No-clipping repair: the guide must reflow the 5 observation
+                # fields, never hide/clip them with overflow:hidden/clip.
+                flow_box_overflow = p.eval_on_selector('[data-follow-stage="input"]', 'e=>getComputedStyle(e).overflow')
+                check(f'{w}px input: .flow-box does not clip its content (overflow is visible)',
+                      flow_box_overflow not in ('hidden', 'clip'), flow_box_overflow)
+                input_cols = p.evaluate("getComputedStyle(document.querySelector('.follow-input-grid')).gridTemplateColumns.split(' ').length")
+                expected_input_cols = 2 if w <= 600 else 5
+                check(f'{w}px input: observation grid is a {expected_input_cols}-column layout', input_cols == expected_input_cols, input_cols)
+                cells = p.eval_on_selector_all('.follow-input-grid > .term', 'es=>es.map(e=>({label:e.querySelector("small").textContent.trim(), value:e.querySelector("b").textContent.trim()}))')
+                check(f'{w}px input: all 5 observation fields present and labelled',
+                      len(cells) == 5 and all(c['label'] and c['value'] for c in cells), cells)
+                cell_font_sizes = p.eval_on_selector_all('.follow-input-grid > .term b', 'es=>es.map(e=>parseFloat(getComputedStyle(e).fontSize))')
+                check(f'{w}px input: observation values are >=14px, none clipped/zero-width',
+                      all(s >= 14 for s in cell_font_sizes), cell_font_sizes)
+                cell_widths = p.eval_on_selector_all('.follow-input-grid > .term', 'es=>es.map(e=>e.getBoundingClientRect().width)')
+                check(f'{w}px input: no observation cell collapsed to zero width (clipped)', all(cw > 0 for cw in cell_widths), cell_widths)
         if w in (320, 1440):
             click_stage(p, 'result')
             p.screenshot(path=str(args.output / f'success_{w}_result.png'), full_page=True)

@@ -32,7 +32,7 @@ function followStageContent(guide, stage) {
     if (stage === 'input') {
         const labels = [tr('m0111'), tr('m0112'), tr('m0113'), tr('m0114'), tr('m0115')];
         return `<div class="flow-box" data-follow-stage="input"><small>${tr('follow.input')}</small>
-      <div class="term-table" style="grid-template-columns:repeat(5,1fr)">${q.obs.map((v, i) => `<div class="term"><small>${labels[i]}</small><b>o${i + 1} = ${F(v, 5)}</b></div>`).join('')}</div>
+      <div class="follow-input-grid">${q.obs.map((v, i) => `<div class="term"><small>${labels[i]}</small><b>o${i + 1} = ${F(v, 5)}</b></div>`).join('')}</div>
       <p class="inline-note">${tr('follow.inputSub', action, F(q.r, 4))}</p></div>`;
     }
     if (stage === 'calculation') {
