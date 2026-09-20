@@ -137,9 +137,31 @@ def _run_checks(p):
         check(f'{w}px decision-chain is a single column', cols == 1, cols)
         sizes = stable_font_sizes(p, '.decision-chain .flow-box small, .decision-chain .flow-box em, .decision-chain .flow-box strong')
         check(f'{w}px decision-chain flow text is >=14px', all(s >= 14 for s in sizes), sizes)
-        box_rects = p.eval_on_selector_all('.decision-chain .flow-box', 'es=>es.map(e=>e.getBoundingClientRect().toJSON())')
-        arrow_rects = p.eval_on_selector_all('.decision-chain .flow-arrow', 'es=>es.map(e=>e.getBoundingClientRect().toJSON())')
+        # animate() (src/app.js) runs updateEnvironment() as a periodic UI refresh
+        # gated by `timestamp - S.lastUI > 130` (~130ms), not on every rAF tick, and
+        # this refresh keeps firing even while paused (only physics advance is
+        # paused-gated). Each refresh replaces #decisionChain.innerHTML wholesale, so
+        # two separate eval_on_selector_all round-trips (query-then-measure) can
+        # straddle a replacement and measure a just-detached handle (isConnected=False,
+        # zero rect) instead of the live element. Querying and measuring boxes+arrows
+        # together in one page.evaluate() is a single synchronous JS turn, immune to
+        # that race.
+        measured = p.evaluate('''() => {
+            const toRect = e => {
+                const r = e.getBoundingClientRect();
+                return {x:r.x,y:r.y,width:r.width,height:r.height,top:r.top,right:r.right,bottom:r.bottom,left:r.left,connected:e.isConnected};
+            };
+            return {
+                boxes: Array.from(document.querySelectorAll('.decision-chain .flow-box')).map(toRect),
+                arrows: Array.from(document.querySelectorAll('.decision-chain .flow-arrow')).map(toRect),
+            };
+        }''')
+        box_rects, arrow_rects = measured['boxes'], measured['arrows']
         check(f'{w}px decision-chain has 3 flow boxes and 2 arrows', len(box_rects) == 3 and len(arrow_rects) == 2, (len(box_rects), len(arrow_rects)))
+        # isConnected alone does not catch display:none (still connected, zero size),
+        # so require a positive width AND height together with connectedness.
+        check(f'{w}px decision-chain boxes and arrows are connected and have positive size',
+              all(r['connected'] and r['width'] > 0 and r['height'] > 0 for r in box_rects + arrow_rects), measured)
         check(f'{w}px decision-chain arrows are confined (<=30px), not full-width', all(r['width'] <= 30 for r in arrow_rects), arrow_rects)
         for i, arrow in enumerate(arrow_rects):
             prev_box, next_box = box_rects[i], box_rects[i + 1]
