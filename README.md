@@ -2,7 +2,7 @@
 
 **Push the pole. Watch the controller respond. Follow one real decision into the network.**
 
-**[Open interactive simulation →](https://tinmanlab.github.io/cartpole_PPO/?lang=en)** · **[한국어로 실행](https://tinmanlab.github.io/cartpole_PPO/index.html?lang=ko)** · [한국어 안내](README.ko.md)
+**[Open interactive simulation →](https://tinmanlab.github.io/cartpole-ppo/?lang=en)** · **[한국어로 실행](https://tinmanlab.github.io/cartpole-ppo/index.html?lang=ko)** · [한국어 안내](README.ko.md)
 
 One CartPole, five connected lessons, real PPO in your browser. No GPU, account, API key or learning backend. English and Korean share the same engine; switching language does not reset your experiment.
 
@@ -14,6 +14,9 @@ One CartPole, five connected lessons, real PPO in your browser. No GPU, account,
 | **What does the network compute?** | **Inspect this live decision** pauses the scene and opens the forward pass. Click a neuron to inspect multiply, sum, bias and tanh. Chapters 3–4 instead follow a clearly labelled **recorded training experience** into GAE, gradients and Adam. |
 | **Can I train a policy myself?** | Chapter 5 → **Start training**. Your learner starts at random I.0, independently of the pretrained opening example. Finish an iteration before freezing its policy for inference. |
 | **What changes if I choose another motor, cost or disturbance?** | **Model · conditions** separates **test only**, **keep weights and configure continuation**, and **create a new learner**. Applying conditions is not starting training. |
+| **Can I follow one real experience from input to update?** | Open **Follow one experience** next to the recorded-policy picker. It is read-only: the same GAE, ratio/clip/loss and before/after probability already used in chapters 3–4, for one immutable recorded sample. Changing the selected record or sample invalidates it until you recapture the current one. |
+
+This viewer is part of a shared multi-repo teaching walkthrough; the canonical cross-repo design contract lives at `cartpole-transformer/docs/learning-suite.md`.
 
 **Inference is not learning.** During a held push, the Actor still computes an action every 20 ms; its weights remain fixed unless the separate learner publishes a completed update. Release, focus loss, pause, reset or a physical/model stop clears held force. No hand-coded balancing controller is inserted.
 
@@ -32,9 +35,9 @@ The cart is a planar reduced-order model, not a full mobile robot. The wheel mes
 
 ## Earlier walkthrough
 
-[![Earlier browser walkthrough; the current viewer uses held pole-tip pushes](docs/media/demo.gif)](https://tinmanlab.github.io/cartpole_PPO/docs/demo.html)
+[![Earlier browser walkthrough; the current viewer uses held pole-tip pushes](docs/media/demo.gif)](https://tinmanlab.github.io/cartpole-ppo/docs/demo.html)
 
-**[Watch the earlier walkthrough](https://tinmanlab.github.io/cartpole_PPO/docs/demo.html).** This real recording predates held-tip input and shows timed cart-body pulses. It remains useful for the network/PPO lessons, but is **not** footage of the current interaction. Its exact English source is preserved in `archive/en/body-pulse.v2.html`; the previous Korean version remains in `archive/ko/`.
+**[Watch the earlier walkthrough](https://tinmanlab.github.io/cartpole-ppo/docs/demo.html).** This real recording predates held-tip input and shows timed cart-body pulses. It remains useful for the network/PPO lessons, but is **not** footage of the current interaction. Its exact English source is preserved in `archive/en/body-pulse.v2.html`; the previous Korean version remains in `archive/ko/`.
 
 ## Online, offline and verification
 

@@ -802,4 +802,5 @@ initializeWorker(false);
 initHardware();
 initPublicUI();
 initInteraction();
+initFollowExperience();
 requestAnimationFrame(animate);
