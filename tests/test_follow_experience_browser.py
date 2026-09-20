@@ -40,13 +40,13 @@ def is_open(p):
 
 def open_guide(p):
     if not is_open(p):
-        p.locator('#followExperience summary').click()
+        p.locator('#followExperience > summary').click()
         p.wait_for_timeout(100)
 
 
 def close_guide(p):
     if is_open(p):
-        p.locator('#followExperience summary').click()
+        p.locator('#followExperience > summary').click()
         p.wait_for_timeout(60)
 
 
@@ -76,6 +76,25 @@ def bar_row_percent(p, stage, index):
     displayed: F(value*100, 3) + '%'. Returns the fraction (0-1)."""
     values = p.eval_on_selector_all(f'[data-follow-stage="{stage}"] .bar-row .value', 'es=>es.map(e=>e.textContent)')
     return float(values[index].rstrip('%')) / 100
+
+
+def sign_of(x):
+    return 'pos' if x > 0 else 'neg' if x < 0 else 'zero'
+
+
+SIGN_SUFFIX = {'pos': 'Pos', 'neg': 'Neg', 'zero': 'Zero'}
+
+
+def expected_sign_text(p, base, sign, value):
+    """The real localized text for a given raw/normalized-advantage sign,
+    fetched from the same tr()/NUM() the app itself calls -- an oracle, not a
+    keyword guess, so a correct caveat (which may legitimately contain words
+    like 'critic' or 'guarantee' in a negated sentence) is never mistaken for
+    the bug it is negating."""
+    key = f'follow.{base}{SIGN_SUFFIX[sign]}'
+    if sign == 'zero':
+        return p.evaluate("(key) => tr(key)", key)
+    return p.evaluate("({k, v}) => tr(k, NUM(Math.abs(v)))", {'k': key, 'v': value})
 
 
 def run():
@@ -188,21 +207,32 @@ def _run_checks(p):
     # quantities that can have opposite signs after rollout mean-centering/
     # scaling -- the guide must never label the normalized sign as "this
     # experience did better/worse than the Critic expected" (that claim only
-    # holds for the unstandardized A_raw vs V_old).
-    def sign_of(x): return 'pos' if x > 0 else 'neg' if x < 0 else 'zero'
+    # holds for the GAE value target V_old+A_raw vs V_old). Compared against
+    # the real localized text (an oracle), not a keyword blacklist -- a
+    # correct caveat legitimately says "not a ... Critic-error claim" and
+    # "does not guarantee", and forbidding those words would reject the fix.
     raw_el = p.locator('[data-follow-stage="calculation"] [data-follow-sign="raw"]')
     norm_el = p.locator('[data-follow-stage="calculation"] [data-follow-sign="normalized"]')
-    check('Raw-advantage sign indicator matches the real sign of A_raw', raw_el.get_attribute('data-follow-sign-value') == sign_of(gae['raw']), (gae['raw'],))
-    check('Normalized-advantage sign indicator matches the real sign of A (can differ from A_raw)', norm_el.get_attribute('data-follow-sign-value') == sign_of(gae['normalized']), (gae['normalized'],))
-    check('Only the raw-advantage line frames the sign as better/worse than the Critic expected',
-          'critic' in raw_el.inner_text().lower() and 'critic' not in norm_el.inner_text().lower())
-    check('Signed-advantage text does not claim a guaranteed probability increase',
-          'guarantee' not in calc_text.lower())
+    raw_sign, norm_sign = sign_of(gae['raw']), sign_of(gae['normalized'])
+    expected_raw_text = expected_sign_text(p, 'calcRaw', raw_sign, gae['raw'])
+    expected_norm_text = expected_sign_text(p, 'calcNorm', norm_sign, gae['normalized'])
+    check('Raw-advantage sign indicator matches the real sign of A_raw', raw_el.get_attribute('data-follow-sign-value') == raw_sign, (gae['raw'],))
+    check('Normalized-advantage sign indicator matches the real sign of A (can differ from A_raw)', norm_el.get_attribute('data-follow-sign-value') == norm_sign, (gae['normalized'],))
+    check('Raw-advantage line matches its exact localized text for this real sign', raw_el.inner_text() == expected_raw_text, (raw_el.inner_text(), expected_raw_text))
+    check('Normalized-advantage line matches its exact localized text for this real sign', norm_el.inner_text() == expected_norm_text, (norm_el.inner_text(), expected_norm_text))
+    check('Raw and normalized advantage lines are worded distinctly, not one claim duplicated', expected_raw_text != expected_norm_text)
+    check('Raw-advantage line frames the sign against the GAE value target (V_old + A_raw), not raw vs V_old directly',
+          'target' in raw_el.inner_text().lower() and 'v_old' in raw_el.inner_text().lower())
+    if norm_sign != 'zero':
+        check('Normalized-advantage line explains rollout mean-centering/scaling (not a raw Critic-error claim)',
+              'rollout' in norm_el.inner_text().lower())
+    check('Calculation caveat explicitly negates a guaranteed probability increase (correct negation, not the bug it negates)',
+          'does not guarantee' in calc_text.lower())
 
     click_stage(p, 'action')
     action_text = p.locator('[data-follow-stage="action"]').inner_text()
     check('Action stage distinguishes the recorded physical choice from the learning evaluation',
-          p.locator('[data-follow-stage="action"] .tag').count() >= 2)
+          'recorded physical choice' in action_text.lower() and 'learning evaluation' in action_text.lower())
     ratio_line = next(line for line in action_text.splitlines() if 'ρ' in line)
     before_p_shown, collection_p_shown, ratio_shown = (float(x) for x in re.findall(r'-?\d+\.\d+', ratio_line))
     check('Ratio line: before-update prob matches calculation().pa (F: 4dp)', abs(before_p_shown - calc_before['pa'][action]) < 5e-5, (before_p_shown, calc_before['pa'][action]))
@@ -238,8 +268,8 @@ def _run_checks(p):
     weight_text = weight_el.inner_text()
     check('Weight witness label identifies the exact recorded weight', expected_weight['label'] in weight_text, (expected_weight['label'], weight_text))
     nums = [float(x) for x in re.findall(r'-?\d+\.\d+(?:e[+-]?\d+)?', weight_text)]
-    check('Weight witness before/after/delta match the stored Lesson.weight exactly',
-          len(nums) >= 3 and abs(nums[0] - expected_weight['before']) < 1e-9 and abs(nums[1] - expected_weight['after']) < 1e-9,
+    check('Weight witness before/after match the stored Lesson.weight at display precision (NUM: 6dp)',
+          len(nums) >= 3 and abs(nums[0] - expected_weight['before']) < 5e-6 and abs(nums[1] - expected_weight['after']) < 5e-6,
           (nums, expected_weight))
 
     # Recorded optimizer and live (frozen) policy are unchanged by inspection.
@@ -332,16 +362,20 @@ def _run_checks(p):
           fixture_q['rawAdv'] * fixture_q['adv'] < 0, (fixture_q['rawAdv'], fixture_q['adv']))
     open_guide(p)
     click_stage(p, 'calculation')
-    for lang, critic_word in (('en', 'critic'), ('ko', 'critic')):
+    fixture_raw_sign, fixture_norm_sign = sign_of(fixture_q['rawAdv']), sign_of(fixture_q['adv'])
+    for lang in ('en', 'ko'):
         if lang == 'ko':
             p.select_option('#language', 'ko')
             p.wait_for_timeout(100)
         raw_el = p.locator('[data-follow-stage="calculation"] [data-follow-sign="raw"]')
         norm_el = p.locator('[data-follow-stage="calculation"] [data-follow-sign="normalized"]')
-        check(f'{lang}: opposite-sign fixture raw indicator matches real A_raw sign', raw_el.get_attribute('data-follow-sign-value') == sign_of(fixture_q['rawAdv']), fixture_q['rawAdv'])
-        check(f'{lang}: opposite-sign fixture normalized indicator matches real A sign (differs from raw)', norm_el.get_attribute('data-follow-sign-value') == sign_of(fixture_q['adv']), fixture_q['adv'])
-        check(f'{lang}: only the raw line frames the sign as better/worse than the Critic expected',
-              critic_word in raw_el.inner_text().lower() and critic_word not in norm_el.inner_text().lower())
+        expected_raw = expected_sign_text(p, 'calcRaw', fixture_raw_sign, fixture_q['rawAdv'])
+        expected_norm = expected_sign_text(p, 'calcNorm', fixture_norm_sign, fixture_q['adv'])
+        check(f'{lang}: opposite-sign fixture raw indicator matches real A_raw sign', raw_el.get_attribute('data-follow-sign-value') == fixture_raw_sign, fixture_q['rawAdv'])
+        check(f'{lang}: opposite-sign fixture normalized indicator matches real A sign (differs from raw)', norm_el.get_attribute('data-follow-sign-value') == fixture_norm_sign, fixture_q['adv'])
+        check(f'{lang}: opposite-sign fixture raw line matches its exact localized text', raw_el.inner_text() == expected_raw, (raw_el.inner_text(), expected_raw))
+        check(f'{lang}: opposite-sign fixture normalized line matches its exact localized text', norm_el.inner_text() == expected_norm, (norm_el.inner_text(), expected_norm))
+        check(f'{lang}: raw and normalized wording differ for this real opposite-sign fixture', expected_raw != expected_norm)
     p.select_option('#language', 'en')
     close_guide(p)
     p.select_option('#recordSelect', original_record)

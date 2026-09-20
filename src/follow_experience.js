@@ -35,7 +35,7 @@ function followStageContent(guide, stage) {
     if (stage === 'input') {
         const labels = [tr('m0111'), tr('m0112'), tr('m0113'), tr('m0114'), tr('m0115')];
         return shell(`
-      <p class="tag neutral">${tr('follow.inputNormalized')}</p>
+      <p class="inline-note">${tr('follow.inputNormalized')}</p>
       <div class="follow-input-grid">${q.obs.map((v, i) => `<div class="term"><small>${labels[i]}</small><b>o${i + 1} = ${F(v, 5)}</b></div>`).join('')}</div>
       <p class="inline-note">${tr('follow.inputSub', action, F(q.r, 4))}</p>
       ${followChapterLink(1)}`);
@@ -66,7 +66,7 @@ function followStageContent(guide, stage) {
         return shell(`
       <p class="tag neutral">${tr('follow.actionRecordedHeading')}</p>
       <p>${tr('follow.actionChosen', action)}</p>
-      <p class="tag neutral">${tr('follow.actionEvalHeading')}</p>
+      <p class="inline-note">${tr('follow.actionEvalHeading')}</p>
       ${probRow(tr('m0156'), collectionP, C.muted)}${probRow(tr('m0157'), beforeP, C.blue)}
       <div class="math-line">ρ = ${F(beforeP, 4)} / ${F(collectionP, 4)} = ${F(c.loss.ratio, 4)}</div>
       <div class="mono">${c.loss.active ? tr('m0160') : tr('m0161')} · L = ${NUM(c.loss.loss)}</div>
@@ -116,7 +116,11 @@ function renderFollowGuide() {
     const navEl = body.querySelector('.follow-nav');
     if (navEl) navEl.onkeydown = e => {
         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+        // Stop this from also reaching the global ArrowLeft/Right sample-stepper
+        // (app.js window keydown handler): the tablist owns arrow keys while
+        // focus is inside it, so it must not also step the recorded sample.
         e.preventDefault();
+        e.stopPropagation();
         const n = FOLLOW_STAGES.length;
         gotoStage(e.key === 'ArrowRight' ? (S.followStage + 1) % n : e.key === 'ArrowLeft' ? (S.followStage - 1 + n) % n : e.key === 'Home' ? 0 : n - 1);
     };
