@@ -41,7 +41,10 @@ function followStageContent(guide, stage) {
       ${followChapterLink(1)}`);
     }
     if (stage === 'calculation') {
-        const sign = g.normalized >= 0 ? 'pos' : 'neg';
+        const rawSign = g.raw > 0 ? 'pos' : g.raw < 0 ? 'neg' : 'zero';
+        const normSign = g.normalized > 0 ? 'pos' : g.normalized < 0 ? 'neg' : 'zero';
+        const rawKey = { pos: 'follow.calcRawPos', neg: 'follow.calcRawNeg', zero: 'follow.calcRawZero' }[rawSign];
+        const normKey = { pos: 'follow.calcNormPos', neg: 'follow.calcNormNeg', zero: 'follow.calcNormZero' }[normSign];
         return shell(`
       <div class="follow-calc-grid">
         <div class="term"><small>${tr('follow.calcReward')}</small><b>r=${F(q.r, 4)}</b></div>
@@ -53,7 +56,8 @@ function followStageContent(guide, stage) {
         <div class="term"><small>${tr('follow.calcRaw')}</small><b>A_raw=${NUM(g.raw)}</b></div>
         <div class="term output"><small>${tr('follow.calcNorm')}</small><b>A=${NUM(g.normalized)}</b></div>
       </div>
-      <p class="inline-note" data-follow-sign="${sign}">${tr(sign === 'pos' ? 'follow.calcSignPos' : 'follow.calcSignNeg', NUM(Math.abs(g.normalized)))}</p>
+      <p class="inline-note" data-follow-sign="raw" data-follow-sign-value="${rawSign}">${rawSign === 'zero' ? tr(rawKey) : tr(rawKey, NUM(Math.abs(g.raw)))}</p>
+      <p class="inline-note" data-follow-sign="normalized" data-follow-sign-value="${normSign}">${normSign === 'zero' ? tr(normKey) : tr(normKey, NUM(Math.abs(g.normalized)))}</p>
       <p class="inline-note">${tr('follow.calcSub')}</p>
       <p class="inline-note">${tr('follow.calcSignCaveat')}</p>`);
     }
@@ -72,7 +76,8 @@ function followStageContent(guide, stage) {
     const dp = c.afterP[q.action] - c.pa[q.action], w = Lesson.weight(c, 'actor', 0);
     return shell(`
     ${probRow(tr('m0157'), c.pa[q.action], C.blue)}${probRow(tr('m0158'), c.afterP[q.action], C.green)}
-    <p class="mono" data-follow-delta>Δ = ${dp >= 0 ? '+' : ''}${F(dp * 100, 3)} pp</p>
+    <p class="mono" data-follow-delta>${tr('follow.resultDeltaLabel')} ${dp >= 0 ? '+' : ''}${F(dp * 100, 3)} pp</p>
+    <p class="inline-note">${tr('follow.resultDeltaNote')}</p>
     <p class="inline-note">${tr('follow.resultBadge')}</p>
     <p class="warning">${tr('follow.minibatchWarning', c.d.batchData.length)}</p>
     <p class="mono" data-follow-weight data-follow-weight-kind="actor" data-follow-weight-index="0">${w.label}: ${NUM(w.before)} → ${NUM(w.after)} (Δ${NUM(w.delta)})</p>
@@ -101,9 +106,9 @@ function renderFollowGuide() {
     body.innerHTML = `<div class="follow-panel" data-follow-key="${key}" data-follow-current-stage="${FOLLOW_STAGES[S.followStage]}">
     <p class="tag neutral">${tr('follow.recordedLabel')}</p>
     <p class="causal-lead">${tr('follow.lead', guide.badge)}</p>
-    <p class="inline-note">${tr('follow.suitePurpose')}</p>
     ${nav}
     ${followStageContent(guide, FOLLOW_STAGES[S.followStage])}
+    <details class="follow-suite"><summary>${tr('follow.suiteLabel')}</summary><p class="inline-note">${tr('follow.suitePurpose')}</p></details>
   </div>`;
     const gotoStage = i => { S.followStage = i; renderFollowGuide(); };
     body.querySelectorAll('[data-follow-stage-nav]').forEach(b => b.onclick = () => gotoStage(+b.dataset.followStageNav));

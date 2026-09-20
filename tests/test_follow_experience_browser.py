@@ -184,11 +184,18 @@ def _run_checks(p):
     check('Displayed GAE bootstrap matches Lesson.gae(q, hp).bootstrap (NUM: 6dp)', abs(bootstrap_shown - gae['bootstrap']) < 5e-6, (bootstrap_shown, gae['bootstrap']))
     check('Displayed GAE delta matches Lesson.gae(q, hp).delta (NUM: 6dp)', abs(delta_shown - gae['delta']) < 5e-6, (delta_shown, gae['delta']))
 
-    # F2: a signed advantage indicator shows the real sign/magnitude of A, without
-    # claiming a single positive advantage guarantees the probability increased.
-    sign_el = p.locator('[data-follow-stage="calculation"] [data-follow-sign]')
-    expected_sign = 'pos' if gae['normalized'] >= 0 else 'neg'
-    check('Calculation stage signed-advantage indicator matches the real sign of A', sign_el.get_attribute('data-follow-sign') == expected_sign, (expected_sign, gae['normalized']))
+    # F2 (coordinator finding): raw and normalized advantage are DIFFERENT
+    # quantities that can have opposite signs after rollout mean-centering/
+    # scaling -- the guide must never label the normalized sign as "this
+    # experience did better/worse than the Critic expected" (that claim only
+    # holds for the unstandardized A_raw vs V_old).
+    def sign_of(x): return 'pos' if x > 0 else 'neg' if x < 0 else 'zero'
+    raw_el = p.locator('[data-follow-stage="calculation"] [data-follow-sign="raw"]')
+    norm_el = p.locator('[data-follow-stage="calculation"] [data-follow-sign="normalized"]')
+    check('Raw-advantage sign indicator matches the real sign of A_raw', raw_el.get_attribute('data-follow-sign-value') == sign_of(gae['raw']), (gae['raw'],))
+    check('Normalized-advantage sign indicator matches the real sign of A (can differ from A_raw)', norm_el.get_attribute('data-follow-sign-value') == sign_of(gae['normalized']), (gae['normalized'],))
+    check('Only the raw-advantage line frames the sign as better/worse than the Critic expected',
+          'critic' in raw_el.inner_text().lower() and 'critic' not in norm_el.inner_text().lower())
     check('Signed-advantage text does not claim a guaranteed probability increase',
           'guarantee' not in calc_text.lower())
 
@@ -220,6 +227,8 @@ def _run_checks(p):
           abs(delta_shown_pp - expected_dp_pp) < 5e-3, (delta_shown_pp, expected_dp_pp))
     check('Positive probability delta is shown with an explicit + sign',
           (expected_dp_pp >= 0) == ('+' in delta_text))
+    check('Result explains "pp" as percentage points, not a relative percent change',
+          'percentage point' in result_text.lower())
 
     # F3: one accessible, real recorded optimizer-weight witness (Lesson.weight),
     # matching the stored optimizer state exactly -- not a live/applied update.
@@ -309,6 +318,34 @@ def _run_checks(p):
     check('Language switch re-renders guide text in Korean', '저장된' in p.locator('.follow-panel').inner_text())
     p.select_option('#language', 'en')
     close_guide(p)
+
+    # F2 regression (coordinator finding): a REAL stored record (example I.1,
+    # sample 0) where A_raw and normalized A have opposite signs, proving the
+    # guide cannot share one "better/worse than the Critic expected" claim
+    # between the two. Checked in both languages, then the original record
+    # selection is restored.
+    original_record = p.eval_on_selector('#recordSelect', 'e => e.value')
+    p.select_option('#recordSelect', '1')
+    p.evaluate('selectSample(0)')
+    fixture_q = p.evaluate('PPOStep.calculation().q')
+    check('Fixture record (I.1, sample 0) has real opposite-sign raw/normalized advantage',
+          fixture_q['rawAdv'] * fixture_q['adv'] < 0, (fixture_q['rawAdv'], fixture_q['adv']))
+    open_guide(p)
+    click_stage(p, 'calculation')
+    for lang, critic_word in (('en', 'critic'), ('ko', 'critic')):
+        if lang == 'ko':
+            p.select_option('#language', 'ko')
+            p.wait_for_timeout(100)
+        raw_el = p.locator('[data-follow-stage="calculation"] [data-follow-sign="raw"]')
+        norm_el = p.locator('[data-follow-stage="calculation"] [data-follow-sign="normalized"]')
+        check(f'{lang}: opposite-sign fixture raw indicator matches real A_raw sign', raw_el.get_attribute('data-follow-sign-value') == sign_of(fixture_q['rawAdv']), fixture_q['rawAdv'])
+        check(f'{lang}: opposite-sign fixture normalized indicator matches real A sign (differs from raw)', norm_el.get_attribute('data-follow-sign-value') == sign_of(fixture_q['adv']), fixture_q['adv'])
+        check(f'{lang}: only the raw line frames the sign as better/worse than the Critic expected',
+              critic_word in raw_el.inner_text().lower() and critic_word not in norm_el.inner_text().lower())
+    p.select_option('#language', 'en')
+    close_guide(p)
+    p.select_option('#recordSelect', original_record)
+    p.wait_for_timeout(80)
 
     # Narrow/desktop widths, all 4 guide stages: no overflow, no bar/box overlap,
     # nav >=44px tall / >=14px labels.
