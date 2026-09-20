@@ -190,6 +190,17 @@ def _run_checks(p):
           not p.locator('#lessonBody').is_visible())
     check('Collapsed support disclosure hides its content', not p.locator('#support').is_visible())
 
+    # F1 (coordinator finding): the new disclosure summaries must meet the same
+    # readability/touch-target floor as the rest of the guide, and keep a
+    # visible native disclosure marker (not just plain text with no affordance).
+    for sel in ('#lessonDisclosure > summary', '#supportDisclosure > summary'):
+        box = p.locator(sel).bounding_box()
+        font_size = p.eval_on_selector(sel, 'e=>parseFloat(getComputedStyle(e).fontSize)')
+        display = p.eval_on_selector(sel, 'e=>getComputedStyle(e).display')
+        check(f'{sel}: text is >=14px', font_size >= 14, font_size)
+        check(f'{sel}: touch target is >=44px tall', box['height'] >= 44, box)
+        check(f'{sel}: keeps a visible native disclosure marker (list-item display)', display == 'list-item', display)
+
     # Native <details> activation: click and keyboard (Enter/Space on the
     # focused summary) both open the disclosure, and it stays a static shell
     # (no reparenting/duplicate IDs) while toggling.
@@ -409,10 +420,47 @@ def _run_checks(p):
     check('Active tab keeps tabindex=0 and inactive tabs tabindex=-1 (roving tabindex)',
           p.eval_on_selector_all('[data-follow-stage-nav]', "es => es.every(e => e.tabIndex === (e.dataset.followStageNav === '0' ? 0 : -1))"))
 
+    # Disclosure folding happens only on guide entry/exit, never on every
+    # render: a manual expand of the lesson-explanation/support disclosures
+    # while the guide stays open must survive stage nav, language switching
+    # and idle re-render ticks (updateHardwareReadout fires ~every 130ms).
+    p.locator('#lessonDisclosure > summary').click()
+    p.locator('#supportDisclosure > summary').click()
+    p.wait_for_timeout(30)
+    check('Manually expanding the lesson disclosure while the guide is open opens it', p.locator('#lessonDisclosure').evaluate('e=>e.open'))
+    check('Manually expanding the support disclosure while the guide is open opens it', p.locator('#supportDisclosure').evaluate('e=>e.open'))
+    click_stage(p, 'calculation')
+    check('Manual lesson-disclosure expansion survives a stage-nav render', p.locator('#lessonDisclosure').evaluate('e=>e.open'))
+    check('Manual support-disclosure expansion survives a stage-nav render', p.locator('#supportDisclosure').evaluate('e=>e.open'))
+    p.select_option('#language', 'ko')
+    p.wait_for_timeout(120)
+    check('Manual lesson-disclosure expansion survives a language switch', p.locator('#lessonDisclosure').evaluate('e=>e.open'))
+    check('Manual support-disclosure expansion survives a language switch', p.locator('#supportDisclosure').evaluate('e=>e.open'))
+    p.select_option('#language', 'en')
+    p.wait_for_timeout(400)
+    check('Manual lesson-disclosure expansion survives idle render ticks', p.locator('#lessonDisclosure').evaluate('e=>e.open'))
+    check('Manual support-disclosure expansion survives idle render ticks', p.locator('#supportDisclosure').evaluate('e=>e.open'))
+    click_stage(p, 'input')
+    # Exiting the guide still restores the plain default regardless of the
+    # manual override -- folding only reacts to entry/exit, but exit always
+    # wins back to the normal, always-open state.
+    close_guide(p)
+    check('Closing the guide restores the lesson disclosure to open even after a manual override', p.locator('#lessonDisclosure').evaluate('e=>e.open'))
+    check('Closing the guide restores the support disclosure to open even after a manual override', p.locator('#supportDisclosure').evaluate('e=>e.open'))
+    check('Closing the guide hides the disclosure summaries again after a manual override', not p.locator('#lessonDisclosure > summary').is_visible() and not p.locator('#supportDisclosure > summary').is_visible())
+    open_guide(p)
+
     # Changing the record invalidates the captured guide.
     p.select_option('#recordSource', 'robust')
     p.wait_for_timeout(150)
     check('Changing source invalidates the guide (explicit stale + recapture, not silent refresh)', p.locator('#followRecapture').count() == 1)
+    # Stale state must not blank either disclosure path: the lesson-explanation
+    # and support disclosures stay reachable (collapsed, summary visible), not
+    # removed/emptied, while the guide body shows the stale/recapture message.
+    check('Stale guide still folds the lesson disclosure (collapsed, not blanked)',
+          not p.locator('#lessonDisclosure').evaluate('e=>e.open') and p.locator('#lessonDisclosure > summary').is_visible())
+    check('Stale guide still folds the support disclosure (collapsed, not blanked)',
+          not p.locator('#supportDisclosure').evaluate('e=>e.open') and p.locator('#supportDisclosure > summary').is_visible())
     p.click('#followRecapture')
     p.wait_for_timeout(80)
     check('Explicit recapture opens a fresh, valid guide for the current sample', p.locator('.follow-panel').is_visible())
@@ -516,8 +564,8 @@ def _run_checks(p):
                 # just the box's own client rect -- is the precise way to detect
                 # a forced mid-token line break.
                 calc_cols = p.evaluate("getComputedStyle(document.querySelector('.follow-calc-grid')).gridTemplateColumns.split(' ').length")
-                expected_calc_cols = 1 if w <= 600 else 4
-                check(f'{w}px calculation: term grid is a {expected_calc_cols}-column layout', calc_cols == expected_calc_cols, calc_cols)
+                check(f'{w}px calculation: term grid collapses to a single column at narrow widths', calc_cols == 1, calc_cols) if w <= 600 else \
+                    check(f'{w}px calculation: term grid renders at least one column that actually fits the lesson column', calc_cols >= 1, calc_cols)
                 value_line_counts = p.eval_on_selector_all(
                     '[data-follow-stage="calculation"] .follow-calc-grid .term b',
                     "es => es.map(e => { const r = document.createRange(); r.selectNodeContents(e); return r.getClientRects().length; })")
@@ -525,6 +573,21 @@ def _run_checks(p):
                       len(value_line_counts) == 6 and all(n == 1 for n in value_line_counts), value_line_counts)
                 calc_value_sizes = p.eval_on_selector_all('[data-follow-stage="calculation"] .follow-calc-grid .term b', 'es=>es.map(e=>parseFloat(getComputedStyle(e).fontSize))')
                 check(f'{w}px calculation: numeric values are >=14px, not shrunk to fit', all(s >= 14 for s in calc_value_sizes), calc_value_sizes)
+                # F2 (coordinator finding): the guide now renders inside the narrower
+                # lesson column (not the old full-width sourcebar), so a fixed
+                # 4-column grid could let a long numeric token overflow past its
+                # own .term cell's right/left edge even while it stays on one
+                # line and the page itself never scrolls horizontally. Check each
+                # value's own rendered Range rect against its own cell's rect,
+                # not just page scrollWidth or line count.
+                cell_bounds = p.eval_on_selector_all(
+                    '[data-follow-stage="calculation"] .follow-calc-grid .term',
+                    "es => es.map(e => { const b = e.querySelector('b'); const r = document.createRange(); r.selectNodeContents(b); "
+                    "const v = r.getBoundingClientRect(), c = e.getBoundingClientRect(); "
+                    "return { valueLeft: v.left, valueRight: v.right, cellLeft: c.left, cellRight: c.right }; })")
+                check(f'{w}px calculation: every numeric value stays within its own .term cell bounds (no cross-cell overflow)',
+                      len(cell_bounds) == 6 and all(c['valueLeft'] >= c['cellLeft'] - 0.5 and c['valueRight'] <= c['cellRight'] + 0.5 for c in cell_bounds),
+                      cell_bounds)
         if w in (320, 1440):
             click_stage(p, 'result')
             p.screenshot(path=str(args.output / f'success_{w}_result.png'), full_page=True)
@@ -550,6 +613,39 @@ def _run_checks(p):
     check('Support material is directly visible again after closing the guide', p.locator('#support').is_visible())
     check('Recorded plant/world card is still present after closing the guide', p.locator('.world-card').count() == 1)
     check('Recorded-policy source picker is still present after closing the guide', p.locator('#recordPicker').count() == 1)
+
+    # Chapter change is also an exit path (setChapter collapses the guide): it
+    # must restore the original lesson exactly like an explicit close, even
+    # from a manually-expanded disclosure state.
+    p.click('[data-chapter="3"]')
+    p.wait_for_timeout(80)
+    open_guide(p)
+    p.locator('#lessonDisclosure > summary').click()
+    p.wait_for_timeout(30)
+    check('Chapter-change setup: guide open and lesson disclosure manually expanded', is_open(p) and p.locator('#lessonDisclosure').evaluate('e=>e.open'))
+    p.click('[data-chapter="1"]')
+    p.wait_for_timeout(80)
+    check('Chapter change closes the guide', not is_open(p))
+    check('Chapter change restores the lesson-explanation disclosure to open (normal exploration)', p.locator('#lessonDisclosure').evaluate('e=>e.open'))
+    check('Chapter change restores the support disclosure to open', p.locator('#supportDisclosure').evaluate('e=>e.open'))
+    check('Chapter change removes guide-active chrome', not p.evaluate("document.body.classList.contains('guide-active')"))
+    p.click('[data-chapter="3"]')
+    p.wait_for_timeout(80)
+
+    # F3 (coordinator finding): .main-grid must not stretch the world card to
+    # match a long open guide's height -- the plant/controls keep their own
+    # natural height, top-aligned next to the guide, while the guide is open.
+    world_before = p.eval_on_selector('.world-card', 'e=>e.getBoundingClientRect().toJSON()')
+    open_guide(p)
+    for stage in STAGES:
+        click_stage(p, stage)
+    world_after = p.eval_on_selector('.world-card', 'e=>e.getBoundingClientRect().toJSON()')
+    guide_rect = p.eval_on_selector('#followExperience', 'e=>e.getBoundingClientRect().toJSON()')
+    check('Opening a long guide does not stretch the world card taller than its own content',
+          world_after['height'] <= world_before['height'] + 2, {'before': world_before, 'after': world_after})
+    check('World card top stays adjacent to the guide (top-aligned, not stretched below it)',
+          abs(world_after['top'] - guide_rect['top']) < 3, {'world': world_after, 'guide': guide_rect})
+    close_guide(p)
 
     check('No uncaught JavaScript errors', not report['errors'], report['errors'])
 
