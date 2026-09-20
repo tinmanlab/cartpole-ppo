@@ -418,6 +418,23 @@ def _run_checks(p):
                       all(s >= 14 for s in cell_font_sizes), cell_font_sizes)
                 cell_widths = p.eval_on_selector_all('.follow-input-grid > .term', 'es=>es.map(e=>e.getBoundingClientRect().width)')
                 check(f'{w}px input: no observation cell collapsed to zero width (clipped)', all(cw > 0 for cw in cell_widths), cell_widths)
+            if stage == 'calculation':
+                # Screenshot-found defect: at narrow 2-column widths the raw
+                # numeric tokens (e.g. "gamma*V(next)=97.811277") wrapped mid-digits
+                # inside their .term box, splitting a correct value across two
+                # lines. A DOM Range over each value's own text content -- not
+                # just the box's own client rect -- is the precise way to detect
+                # a forced mid-token line break.
+                calc_cols = p.evaluate("getComputedStyle(document.querySelector('.follow-calc-grid')).gridTemplateColumns.split(' ').length")
+                expected_calc_cols = 1 if w <= 600 else 4
+                check(f'{w}px calculation: term grid is a {expected_calc_cols}-column layout', calc_cols == expected_calc_cols, calc_cols)
+                value_line_counts = p.eval_on_selector_all(
+                    '[data-follow-stage="calculation"] .follow-calc-grid .term b',
+                    "es => es.map(e => { const r = document.createRange(); r.selectNodeContents(e); return r.getClientRects().length; })")
+                check(f'{w}px calculation: every numeric value stays on one DOM Range line (no mid-number wrap)',
+                      len(value_line_counts) == 6 and all(n == 1 for n in value_line_counts), value_line_counts)
+                calc_value_sizes = p.eval_on_selector_all('[data-follow-stage="calculation"] .follow-calc-grid .term b', 'es=>es.map(e=>parseFloat(getComputedStyle(e).fontSize))')
+                check(f'{w}px calculation: numeric values are >=14px, not shrunk to fit', all(s >= 14 for s in calc_value_sizes), calc_value_sizes)
         if w in (320, 1440):
             click_stage(p, 'result')
             p.screenshot(path=str(args.output / f'success_{w}_result.png'), full_page=True)
