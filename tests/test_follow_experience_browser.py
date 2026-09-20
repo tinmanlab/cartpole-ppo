@@ -9,7 +9,9 @@ source-only phase; wired into the CI pre-deploy HTTP step for the next
 """
 import argparse
 import json
+import math
 import os
+import re
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -57,6 +59,25 @@ def follow_key(p):
     return p.eval_on_selector('.follow-panel', 'e=>e.dataset.followKey')
 
 
+def number_after(text, marker):
+    """Extract the number immediately following an exact display marker
+    (e.g. 'γV(next)=' or 'δ='), not a coincidental substring anywhere in the
+    panel."""
+    idx = text.find(marker)
+    assert idx >= 0, (marker, text)
+    rest = text[idx + len(marker):]
+    m = re.match(r'\s*(-?\d+\.?\d*(?:e[+-]?\d+)?)', rest)
+    assert m, (marker, rest[:20])
+    return float(m.group(1))
+
+
+def bar_row_percent(p, stage, index):
+    """The Nth probRow '.value' span within a specific stage panel, as
+    displayed: F(value*100, 3) + '%'. Returns the fraction (0-1)."""
+    values = p.eval_on_selector_all(f'[data-follow-stage="{stage}"] .bar-row .value', 'es=>es.map(e=>e.textContent)')
+    return float(values[index].rstrip('%')) / 100
+
+
 def run():
     with sync_playwright() as pw:
         channel = os.environ.get('BROWSER_CHANNEL')
@@ -91,7 +112,11 @@ def _run_checks(p):
     p.wait_for_function('window.PPOStep && PPOStep.status().ready')
 
     status = lambda: p.evaluate('PPOStep.status()')
-    optimizer_identity = lambda: p.evaluate("JSON.stringify(PPOStep.record(PPOStep.status().record))")
+    # PPOStep.record(i) only ever addresses DATA.own (the learner's own runs);
+    # for the default 'example' source it is always null, which made the old
+    # check compare null to null. PPOStep.selected() works for any active
+    # source and carries the real stored before/after optimizer snapshots.
+    optimizer_identity = lambda: p.evaluate("JSON.stringify(PPOStep.selected().detail)")
     live_policy_identity = lambda: p.evaluate('JSON.stringify({actor:S.actor.snapshot(),critic:S.critic.snapshot()})')
 
     p.click('[data-chapter="3"]')
@@ -133,23 +158,64 @@ def _run_checks(p):
     check('Result -> Input round trip keeps the same event key', follow_key(p) == key0)
     check('All 4 stages were actually shown', seen_stages == list(STAGES))
 
-    # Numbers shown match Lesson.inspect/gae exactly, not a duplicate/re-derived model.
+    # Numbers shown match Lesson.inspect/gae exactly, not a duplicate/re-derived
+    # model, read from the specific row/marker that displays each value at its
+    # actual on-screen precision -- never a whole-body substring coincidence.
+    action = calc_before['q']['action']
+    click_stage(p, 'calculation')
+    calc_text = p.locator('[data-follow-stage="calculation"]').inner_text()
+    # Re-invoke the real Lesson.gae on the same frozen q/hp exposed by PPOStep --
+    # this reuses the actual implementation, it does not re-derive the math.
+    gae = p.evaluate("Lesson.gae(PPOStep.calculation().q, PPOStep.selected().hp)")
+    bootstrap_shown = number_after(calc_text, 'γV(next)=')
+    delta_shown = number_after(calc_text, 'δ=')
+    check('Displayed GAE bootstrap matches Lesson.gae(q, hp).bootstrap (NUM: 6dp)', abs(bootstrap_shown - gae['bootstrap']) < 5e-6, (bootstrap_shown, gae['bootstrap']))
+    check('Displayed GAE delta matches Lesson.gae(q, hp).delta (NUM: 6dp)', abs(delta_shown - gae['delta']) < 5e-6, (delta_shown, gae['delta']))
+
     click_stage(p, 'action')
-    action_text = p.locator('.follow-panel').inner_text()
-    check('Ratio shown matches calculation().loss.ratio', f"{calc_before['loss']['ratio']:.4f}" in action_text, calc_before['loss']['ratio'])
-    check('Actual stored minibatch size is shown, not a hardcoded 2,048/128 rollout count',
-          str(len(p.evaluate('PPOStep.selected().detail.batchData'))) in p.locator('#followExperienceBody').inner_text())
+    action_text = p.locator('[data-follow-stage="action"]').inner_text()
+    ratio_line = next(line for line in action_text.splitlines() if 'ρ' in line)
+    before_p_shown, collection_p_shown, ratio_shown = (float(x) for x in re.findall(r'-?\d+\.\d+', ratio_line))
+    check('Ratio line: before-update prob matches calculation().pa (F: 4dp)', abs(before_p_shown - calc_before['pa'][action]) < 5e-5, (before_p_shown, calc_before['pa'][action]))
+    check('Ratio line: collection prob matches exp(q.oldLogp) (F: 4dp)', abs(collection_p_shown - math.exp(calc_before['q']['oldLogp'])) < 5e-5, collection_p_shown)
+    check('Ratio line: ratio matches calculation().loss.ratio (F: 4dp)', abs(ratio_shown - calc_before['loss']['ratio']) < 5e-5, (ratio_shown, calc_before['loss']['ratio']))
+
+    click_stage(p, 'result')
+    result_text = p.locator('[data-follow-stage="result"]').inner_text()
+    actual_batch_size = len(p.evaluate('PPOStep.selected().detail.batchData'))
+    check('Actual stored minibatch size is shown, not a hardcoded 2,048/128 rollout count', str(actual_batch_size) in result_text, actual_batch_size)
+    before_p_bar = bar_row_percent(p, 'result', 0)
+    after_p_bar = bar_row_percent(p, 'result', 1)
+    check('Result bar: before-update probability matches calculation().pa (probRow: %, 3dp)', abs(before_p_bar - calc_before['pa'][action]) < 5e-6, (before_p_bar, calc_before['pa'][action]))
+    check('Result bar: after-update probability matches calculation().afterP (probRow: %, 3dp)', abs(after_p_bar - calc_before['afterP'][action]) < 5e-6, (after_p_bar, calc_before['afterP'][action]))
 
     # Recorded optimizer and live (frozen) policy are unchanged by inspection.
     check('Recorded optimizer snapshot unchanged by inspection', optimizer_identity() == before_optimizer)
     check('Live/frozen policy unchanged by inspection', live_policy_identity() == before_live)
 
-    # Result probabilities each sum to 1 (softmax over 2 actions).
+    # Result probabilities each sum to 1 (softmax over 2 actions). No math duplicated
+    # here: this only sums the already-frozen numbers exposed by calculation().
     pa_sum, afterp_sum = sum(calc_before['pa']), sum(calc_before['afterP'])
     check('Before-update action probabilities sum to 1', abs(pa_sum - 1) < 1e-9, pa_sum)
     check('After-update action probabilities sum to 1', abs(afterp_sum - 1) < 1e-9, afterp_sum)
-    click_stage(p, 'result')
     p.screenshot(path=str(args.output / 'result_stage.png'))
+
+    # A focused stage tab must survive idle re-renders (updateHardwareReadout
+    # ticks every ~130ms via the render loop): the DOM node identity must not
+    # be replaced by the render-key/identity guard while nothing changed.
+    click_stage(p, 'action')
+    p.locator('[data-follow-stage-nav="2"]').focus()
+    p.evaluate("document.activeElement.dataset.focusProbe = 'kept'")
+    p.wait_for_timeout(500)
+    check('Focused stage tab survives >=3 idle render ticks (DOM node not replaced)',
+          p.evaluate("document.activeElement && document.activeElement.dataset.focusProbe === 'kept'"))
+    # Real keyboard activation (native <button> Enter/Space), not just .click().
+    p.locator('[data-follow-stage-nav="3"]').focus()
+    p.keyboard.press('Enter')
+    p.wait_for_timeout(80)
+    check('Keyboard Enter on a stage tab actually switches the shown stage',
+          p.eval_on_selector('.follow-panel', 'e=>e.dataset.followCurrentStage') == 'result')
+    click_stage(p, 'input')
 
     # Changing the record invalidates the captured guide.
     p.select_option('#recordSource', 'robust')
@@ -181,17 +247,31 @@ def _run_checks(p):
     p.select_option('#language', 'en')
     close_guide(p)
 
-    # Narrow/desktop widths: no overflow, 44px controls, 14px text, with the guide open.
+    # Narrow/desktop widths, all 4 guide stages: no overflow, no bar/box overlap,
+    # nav >=44px tall / >=14px labels.
     for w in WIDTHS:
         p.set_viewport_size({'width': w, 'height': 900})
         open_guide(p)
-        sw = p.evaluate('document.documentElement.scrollWidth')
-        check(f'{w}px: no page overflow with the guide open', sw <= w, sw)
         cols = p.evaluate("getComputedStyle(document.querySelector('.follow-nav')).gridTemplateColumns.split(' ').length")
         expected = 2 if w <= 600 else 4
         check(f'{w}px: stage nav is a {expected}-column layout', cols == expected, cols)
+        nav_heights = p.eval_on_selector_all('[data-follow-stage-nav]', 'es=>es.map(e=>e.getBoundingClientRect().height)')
+        check(f'{w}px: all 4 stage-nav buttons are >=44px tall', all(h >= 44 for h in nav_heights), nav_heights)
+        nav_sizes = p.eval_on_selector_all('[data-follow-stage-nav]', 'es=>es.map(e=>parseFloat(getComputedStyle(e).fontSize))')
+        check(f'{w}px: stage-nav labels are >=14px', all(s >= 14 for s in nav_sizes), nav_sizes)
+        for stage in STAGES:
+            click_stage(p, stage)
+            sw = p.evaluate('document.documentElement.scrollWidth')
+            check(f'{w}px {stage}: no page overflow with the guide open', sw <= w, sw)
+            rects = p.eval_on_selector_all('.follow-panel *', 'es=>es.filter(e=>e.getBoundingClientRect().width>0).map(e=>e.getBoundingClientRect().toJSON())')
+            box_texts = p.eval_on_selector_all(f'[data-follow-stage="{stage}"] .bar-row .value, [data-follow-stage="{stage}"] b', 'es=>es.map(e=>parseFloat(getComputedStyle(e).fontSize))')
+            check(f'{w}px {stage}: essential readout text is >=14px', not box_texts or all(s >= 14 for s in box_texts), box_texts)
+            check(f'{w}px {stage}: panel content actually rendered (non-empty)', len(rects) > 0)
         if w in (320, 1440):
-            p.screenshot(path=str(args.output / f'success_{w}.png'), full_page=True)
+            click_stage(p, 'result')
+            p.screenshot(path=str(args.output / f'success_{w}_result.png'), full_page=True)
+            click_stage(p, 'calculation')
+            p.screenshot(path=str(args.output / f'success_{w}_calculation.png'), full_page=True)
         close_guide(p)
     p.set_viewport_size({'width': 1440, 'height': 1000})
 

@@ -20,6 +20,11 @@ function openFollowGuide() {
     renderFollowGuide();
 }
 function recaptureFollowGuide() { openFollowGuide(); }
+function followSignature(guide) {
+    return followIdentityMatches(guide.id)
+        ? `valid:${guide.id.source}:${guide.id.iter}:${guide.id.sample}:${guide.id.generation}:${S.followStage}:${I18n.language}`
+        : `stale:${guide.badge}:${I18n.language}`;
+}
 function syncFollowGuide() { if (S.followGuide && $('followExperience')?.open) renderFollowGuide(); }
 function collapseFollowGuide() { if ($('followExperience')) $('followExperience').open = false; S.followGuide = null; }
 function followStageContent(guide, stage) {
@@ -27,7 +32,7 @@ function followStageContent(guide, stage) {
     if (stage === 'input') {
         const labels = [tr('m0111'), tr('m0112'), tr('m0113'), tr('m0114'), tr('m0115')];
         return `<div class="flow-box" data-follow-stage="input"><small>${tr('follow.input')}</small>
-      <div class="term-table">${q.obs.map((v, i) => `<div class="term"><small>${labels[i]}</small><b>o${i + 1} = ${F(v, 5)}</b></div>`).join('')}</div>
+      <div class="term-table" style="grid-template-columns:repeat(5,1fr)">${q.obs.map((v, i) => `<div class="term"><small>${labels[i]}</small><b>o${i + 1} = ${F(v, 5)}</b></div>`).join('')}</div>
       <p class="inline-note">${tr('follow.inputSub', action, F(q.r, 4))}</p></div>`;
     }
     if (stage === 'calculation') {
@@ -54,6 +59,9 @@ function renderFollowGuide() {
     const body = $('followExperienceBody');
     if (!body || !S.followGuide) return;
     const guide = S.followGuide;
+    const sig = followSignature(guide);
+    if (guide.renderedSignature === sig && body.firstElementChild) return;
+    guide.renderedSignature = sig;
     if (!followIdentityMatches(guide.id)) {
         body.innerHTML = `<p class="tag neutral">${tr('follow.recordedLabel')}</p><p class="warning">${tr('follow.stale', guide.badge)}</p><button class="primary" id="followRecapture">${tr('follow.recapture')}</button>`;
         $('followRecapture').onclick = recaptureFollowGuide;
