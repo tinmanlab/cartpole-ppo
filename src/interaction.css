@@ -16,6 +16,15 @@
 .decision-chain .flow-box { padding:12px; }
 .follow-experience { margin:10px 0 0; min-width:0; }
 .follow-experience > summary { cursor:pointer; color:var(--muted); padding:8px 0; }
+.lesson-card > .follow-experience { border-top:0; margin:0; padding:9px 13px; }
+.lesson-card > .follow-experience > summary { padding:0; }
+.lesson-disclosure { border-top:0; margin-top:0; padding-top:0; display:flex; flex-direction:column; flex:1; min-height:0; }
+.lesson-disclosure > summary { display:none; }
+.guide-active .lesson-disclosure > summary { display:list-item; list-style-position:inside; box-sizing:border-box; min-height:44px; padding:12px 13px; border-bottom:1px solid var(--line); background:#f8fafc; font-weight:600; font-size:14px; color:#45617b; }
+/* With the guide folded into the lesson column, a long open guide must not
+   stretch (align-items:stretch) the world card to match its height -- the
+   plant/controls stay their natural height, top-aligned next to the guide. */
+.guide-active .main-grid { align-items:start; }
 .follow-nav { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:10px 0; }
 .follow-nav button { min-height:44px; }
 .follow-nav button.active { background:#f0faf5; border-color:#8dd2b0; color:#16734e; }
@@ -25,8 +34,7 @@
 .follow-panel .bar-row { margin-top:6px; }
 .follow-input-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:8px; }
 .follow-input-grid > div { min-width:0; }
-.follow-calc-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:8px; }
-.follow-calc-grid.pair { grid-template-columns:repeat(2,1fr); }
+.follow-calc-grid, .follow-calc-grid.pair { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:6px; margin-top:8px; }
 .follow-calc-grid > div { min-width:0; }
 .follow-calc-grid .term b { white-space:nowrap; overflow-wrap:normal; }
 .decision-result { margin:18px 0; border-left:3px solid #7b9ab6; padding:14px; background:#f5f8fc; }
