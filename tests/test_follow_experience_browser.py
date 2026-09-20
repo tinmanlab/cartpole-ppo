@@ -40,13 +40,13 @@ def is_open(p):
 
 def open_guide(p):
     if not is_open(p):
-        p.locator('#followExperience summary').click()
+        p.locator('#followExperience > summary').click()
         p.wait_for_timeout(100)
 
 
 def close_guide(p):
     if is_open(p):
-        p.locator('#followExperience summary').click()
+        p.locator('#followExperience > summary').click()
         p.wait_for_timeout(60)
 
 
@@ -76,6 +76,25 @@ def bar_row_percent(p, stage, index):
     displayed: F(value*100, 3) + '%'. Returns the fraction (0-1)."""
     values = p.eval_on_selector_all(f'[data-follow-stage="{stage}"] .bar-row .value', 'es=>es.map(e=>e.textContent)')
     return float(values[index].rstrip('%')) / 100
+
+
+def sign_of(x):
+    return 'pos' if x > 0 else 'neg' if x < 0 else 'zero'
+
+
+SIGN_SUFFIX = {'pos': 'Pos', 'neg': 'Neg', 'zero': 'Zero'}
+
+
+def expected_sign_text(p, base, sign, value):
+    """The real localized text for a given raw/normalized-advantage sign,
+    fetched from the same tr()/NUM() the app itself calls -- an oracle, not a
+    keyword guess, so a correct caveat (which may legitimately contain words
+    like 'critic' or 'guarantee' in a negated sentence) is never mistaken for
+    the bug it is negating."""
+    key = f'follow.{base}{SIGN_SUFFIX[sign]}'
+    if sign == 'zero':
+        return p.evaluate("(key) => tr(key)", key)
+    return p.evaluate("({k, v}) => tr(k, NUM(Math.abs(v)))", {'k': key, 'v': value})
 
 
 def run():
@@ -137,6 +156,8 @@ def _run_checks(p):
     open_guide(p)
     check('Opening the guide pauses the live plant', status()['paused'])
     check('Opening the guide is visible, labeled RECORDED, and populated', p.locator('.follow-panel').is_visible() and 'RECORDED' in p.locator('.follow-panel').inner_text().upper())
+    check('Guide area names the sibling PPO/Transformer/DiffusionPolicy apps compactly, without a new large header',
+          all(name in p.locator('.follow-panel').inner_text() for name in ('PPO', 'Transformer', 'DiffusionPolicy')) and p.locator('.follow-panel h1, .follow-panel h2').count() == 0)
 
     # 4 real stage-nav buttons, current stage marked, EN labels present.
     nav_buttons = p.locator('[data-follow-stage-nav]')
@@ -146,6 +167,16 @@ def _run_checks(p):
     sizes = p.eval_on_selector_all('[data-follow-stage-nav]', 'es=>es.map(e=>parseFloat(getComputedStyle(e).fontSize))')
     check('Stage-nav labels are >=14px', all(s >= 14 for s in sizes), sizes)
     check('Stage 0 (input) starts as the current stage', p.locator('[data-follow-stage-nav="0"]').get_attribute('aria-current') == 'step')
+
+    # F4: each tab is a real tab associated with its own tabpanel.
+    active_tab = p.locator('[data-follow-stage-nav="0"]')
+    check('Active tab has aria-controls pointing at a real, visible tabpanel',
+          p.eval_on_selector('#followTab-0', "e => { const panel = document.getElementById(e.getAttribute('aria-controls')); return !!panel && panel.getAttribute('role') === 'tabpanel' && panel.getAttribute('aria-labelledby') === 'followTab-0'; }"))
+
+    # F1: Input stage explicitly marks features as normalized/dimensionless.
+    input_text = p.locator('[data-follow-stage="input"]').inner_text()
+    check('Input stage explicitly says the five features are normalized/dimensionless, not physical units',
+          'normaliz' in input_text.lower() and 'dimensionless' in input_text.lower())
 
     key0 = follow_key(p)
     seen_stages = []
@@ -172,8 +203,77 @@ def _run_checks(p):
     check('Displayed GAE bootstrap matches Lesson.gae(q, hp).bootstrap (NUM: 6dp)', abs(bootstrap_shown - gae['bootstrap']) < 5e-6, (bootstrap_shown, gae['bootstrap']))
     check('Displayed GAE delta matches Lesson.gae(q, hp).delta (NUM: 6dp)', abs(delta_shown - gae['delta']) < 5e-6, (delta_shown, gae['delta']))
 
+    # F2 (coordinator finding): raw and normalized advantage are DIFFERENT
+    # quantities that can have opposite signs after rollout mean-centering/
+    # scaling -- the guide must never label the normalized sign as "this
+    # experience did better/worse than the Critic expected" (that claim only
+    # holds for the GAE value target V_old+A_raw vs V_old). Compared against
+    # the real localized text (an oracle), not a keyword blacklist -- a
+    # correct caveat legitimately says "not a ... Critic-error claim" and
+    # "does not guarantee", and forbidding those words would reject the fix.
+    raw_el = p.locator('[data-follow-stage="calculation"] [data-follow-sign="raw"]')
+    norm_el = p.locator('[data-follow-stage="calculation"] [data-follow-sign="normalized"]')
+    raw_sign, norm_sign = sign_of(gae['raw']), sign_of(gae['normalized'])
+    expected_raw_text = expected_sign_text(p, 'calcRaw', raw_sign, gae['raw'])
+    expected_norm_text = expected_sign_text(p, 'calcNorm', norm_sign, gae['normalized'])
+    check('Raw-advantage sign indicator matches the real sign of A_raw', raw_el.get_attribute('data-follow-sign-value') == raw_sign, (gae['raw'],))
+    check('Normalized-advantage sign indicator matches the real sign of A (can differ from A_raw)', norm_el.get_attribute('data-follow-sign-value') == norm_sign, (gae['normalized'],))
+    check('Raw-advantage line matches its exact localized text for this real sign', raw_el.inner_text() == expected_raw_text, (raw_el.inner_text(), expected_raw_text))
+    check('Normalized-advantage line matches its exact localized text for this real sign', norm_el.inner_text() == expected_norm_text, (norm_el.inner_text(), expected_norm_text))
+    check('Raw and normalized advantage lines are worded distinctly, not one claim duplicated', expected_raw_text != expected_norm_text)
+    check('Raw-advantage line frames the sign against the GAE value target (V_old + A_raw), not raw vs V_old directly',
+          'target' in raw_el.inner_text().lower() and 'v_old' in raw_el.inner_text().lower())
+    if norm_sign != 'zero':
+        check('Normalized-advantage line explains rollout mean-centering/scaling (not a raw Critic-error claim)',
+              'rollout' in norm_el.inner_text().lower())
+    check('Calculation caveat explicitly negates a guaranteed probability increase (correct negation, not the bug it negates)',
+          'does not guarantee' in calc_text.lower())
+
+    # New arithmetic connection: current-step delta chains into the accumulated
+    # raw advantage (delta + future TD-residual sum = A_raw), and that raw
+    # advantage chains into the stored GAE value target (V_old + A_raw =
+    # target). Both read straight off the real Lesson.gae() object -- no
+    # second GAE/normalization is computed here.
+    chain_el = p.locator('[data-follow-stage="calculation"] [data-follow-chain]')
+    target_el = p.locator('[data-follow-stage="calculation"] [data-follow-target]')
+    check('Delta-to-advantage chain equation is visible in the calculation stage', chain_el.count() == 1)
+    check('Value-target equation is visible in the calculation stage', target_el.count() == 1)
+    chain_nums = [float(x) for x in re.findall(r'-?\d+\.\d+(?:e[+-]?\d+)?', chain_el.inner_text())]
+    target_nums = [float(x) for x in re.findall(r'-?\d+\.\d+(?:e[+-]?\d+)?', target_el.inner_text())]
+    check('Chain equation shows delta, future and A_raw matching Lesson.gae exactly (NUM: 6dp)',
+          len(chain_nums) == 3 and abs(chain_nums[0] - gae['delta']) < 5e-6 and abs(chain_nums[1] - gae['future']) < 5e-6 and abs(chain_nums[2] - gae['raw']) < 5e-6,
+          (chain_nums, gae))
+    check('Chain equation actually sums: delta + future == A_raw at display precision',
+          abs((chain_nums[0] + chain_nums[1]) - chain_nums[2]) < 5e-6, chain_nums)
+    check('Target equation shows V_old and A_raw matching the frozen record, summing to Lesson.gae.target (NUM: 6dp)',
+          len(target_nums) == 3 and abs(target_nums[0] - calc_before['q']['oldV']) < 5e-6 and abs(target_nums[1] - gae['raw']) < 5e-6 and abs(target_nums[2] - gae['target']) < 5e-6,
+          (target_nums, gae))
+    check('Target equation actually sums: V_old + A_raw == target at display precision',
+          # All three operands are now shown at consistent NUM() 6dp precision.
+          abs((target_nums[0] + target_nums[1]) - target_nums[2]) < 5e-6, target_nums)
+    check('"future" is explicitly distinguished from a future reward (not fabricated reward language)',
+          'not a future reward' in calc_text.lower())
+    check('"future" TD-residual sum is scoped to this rollout\'s own episode segment, not every future step',
+          'episode segment' in calc_text.lower() and 'done boundary' in calc_text.lower())
+    check('Target equation discloses its operands are rounded for display', 'rounded for display' in calc_text.lower())
+
+    # The chain's fuller explanation lives in a closed-by-default <details> --
+    # tested both closed (visible summary only) and explicitly opened (deep
+    # copy actually present), never asserted while implicitly open.
+    chain_details = p.locator('[data-follow-stage="calculation"] details[data-follow-chain-details]')
+    check('Chain details element exists and is closed by default', chain_details.count() == 1 and not chain_details.evaluate('e=>e.open'))
+    summary_text = chain_details.locator('summary').inner_text()
+    check('Closed details shows only its summary text, not the deep copy', chain_details.inner_text() == summary_text)
+    chain_details.evaluate('e=>e.open=true')
+    p.wait_for_timeout(30)
+    opened_text = chain_details.inner_text()
+    check('Opened details reveals the deeper GAE walk-back explanation', 'γλ' in opened_text or 'gae' in opened_text.lower())
+    chain_details.evaluate('e=>e.open=false')
+
     click_stage(p, 'action')
     action_text = p.locator('[data-follow-stage="action"]').inner_text()
+    check('Action stage distinguishes the recorded physical choice from the learning evaluation',
+          'recorded physical choice' in action_text.lower() and 'learning evaluation' in action_text.lower())
     ratio_line = next(line for line in action_text.splitlines() if 'ρ' in line)
     before_p_shown, collection_p_shown, ratio_shown = (float(x) for x in re.findall(r'-?\d+\.\d+', ratio_line))
     check('Ratio line: before-update prob matches calculation().pa (F: 4dp)', abs(before_p_shown - calc_before['pa'][action]) < 5e-5, (before_p_shown, calc_before['pa'][action]))
@@ -188,6 +288,30 @@ def _run_checks(p):
     after_p_bar = bar_row_percent(p, 'result', 1)
     check('Result bar: before-update probability matches calculation().pa (probRow: %, 3dp)', abs(before_p_bar - calc_before['pa'][action]) < 5e-6, (before_p_bar, calc_before['pa'][action]))
     check('Result bar: after-update probability matches calculation().afterP (probRow: %, 3dp)', abs(after_p_bar - calc_before['afterP'][action]) < 5e-6, (after_p_bar, calc_before['afterP'][action]))
+
+    # F3: signed probability change in percentage points, correct unit and sign.
+    expected_dp_pp = (calc_before['afterP'][action] - calc_before['pa'][action]) * 100
+    delta_text = p.locator('[data-follow-stage="result"] [data-follow-delta]').inner_text()
+    check('Result shows the unit "pp" for the probability delta', 'pp' in delta_text, delta_text)
+    delta_shown_pp = float(re.search(r'(-?\+?[\d.]+)\s*pp', delta_text.replace('+', '')).group(1))
+    check('Signed probability-change delta (pp) matches after-before at display precision',
+          abs(delta_shown_pp - expected_dp_pp) < 5e-3, (delta_shown_pp, expected_dp_pp))
+    check('Positive probability delta is shown with an explicit + sign',
+          (expected_dp_pp >= 0) == ('+' in delta_text))
+    check('Result explains "pp" as percentage points, not a relative percent change',
+          'percentage point' in result_text.lower())
+
+    # F3: one accessible, real recorded optimizer-weight witness (Lesson.weight),
+    # matching the stored optimizer state exactly -- not a live/applied update.
+    weight_el = p.locator('[data-follow-stage="result"] [data-follow-weight]')
+    weight_kind, weight_index = weight_el.get_attribute('data-follow-weight-kind'), int(weight_el.get_attribute('data-follow-weight-index'))
+    expected_weight = p.evaluate(f"Lesson.weight(calculation(), '{weight_kind}', {weight_index})")
+    weight_text = weight_el.inner_text()
+    check('Weight witness label identifies the exact recorded weight', expected_weight['label'] in weight_text, (expected_weight['label'], weight_text))
+    nums = [float(x) for x in re.findall(r'-?\d+\.\d+(?:e[+-]?\d+)?', weight_text)]
+    check('Weight witness before/after match the stored Lesson.weight at display precision (NUM: 6dp)',
+          len(nums) >= 3 and abs(nums[0] - expected_weight['before']) < 5e-6 and abs(nums[1] - expected_weight['after']) < 5e-6,
+          (nums, expected_weight))
 
     # Recorded optimizer and live (frozen) policy are unchanged by inspection.
     check('Recorded optimizer snapshot unchanged by inspection', optimizer_identity() == before_optimizer)
@@ -216,6 +340,25 @@ def _run_checks(p):
     check('Keyboard Enter on a stage tab actually switches the shown stage',
           p.eval_on_selector('.follow-panel', 'e=>e.dataset.followCurrentStage') == 'result')
     click_stage(p, 'input')
+
+    # F4: real ArrowLeft/Right/Home/End tablist keyboard navigation, with focus
+    # returned to the newly active tab after the stage rerender.
+    p.locator('[data-follow-stage-nav="0"]').focus()
+    p.keyboard.press('ArrowRight')
+    p.wait_for_timeout(60)
+    check('ArrowRight moves from input to calculation', p.eval_on_selector('.follow-panel', 'e=>e.dataset.followCurrentStage') == 'calculation')
+    check('Focus returns to the newly active tab after ArrowRight', p.evaluate("document.activeElement && document.activeElement.dataset.followStageNav === '1'"))
+    p.keyboard.press('ArrowLeft')
+    p.wait_for_timeout(60)
+    check('ArrowLeft moves back from calculation to input', p.eval_on_selector('.follow-panel', 'e=>e.dataset.followCurrentStage') == 'input')
+    p.keyboard.press('End')
+    p.wait_for_timeout(60)
+    check('End jumps to the result stage', p.eval_on_selector('.follow-panel', 'e=>e.dataset.followCurrentStage') == 'result')
+    p.keyboard.press('Home')
+    p.wait_for_timeout(60)
+    check('Home jumps back to the input stage', p.eval_on_selector('.follow-panel', 'e=>e.dataset.followCurrentStage') == 'input')
+    check('Active tab keeps tabindex=0 and inactive tabs tabindex=-1 (roving tabindex)',
+          p.eval_on_selector_all('[data-follow-stage-nav]', "es => es.every(e => e.tabIndex === (e.dataset.followStageNav === '0' ? 0 : -1))"))
 
     # Changing the record invalidates the captured guide.
     p.select_option('#recordSource', 'robust')
@@ -246,6 +389,38 @@ def _run_checks(p):
     check('Language switch re-renders guide text in Korean', '저장된' in p.locator('.follow-panel').inner_text())
     p.select_option('#language', 'en')
     close_guide(p)
+
+    # F2 regression (coordinator finding): a REAL stored record (example I.1,
+    # sample 0) where A_raw and normalized A have opposite signs, proving the
+    # guide cannot share one "better/worse than the Critic expected" claim
+    # between the two. Checked in both languages, then the original record
+    # selection is restored.
+    original_record = p.eval_on_selector('#recordSelect', 'e => e.value')
+    p.select_option('#recordSelect', '1')
+    p.evaluate('selectSample(0)')
+    fixture_q = p.evaluate('PPOStep.calculation().q')
+    check('Fixture record (I.1, sample 0) has real opposite-sign raw/normalized advantage',
+          fixture_q['rawAdv'] * fixture_q['adv'] < 0, (fixture_q['rawAdv'], fixture_q['adv']))
+    open_guide(p)
+    click_stage(p, 'calculation')
+    fixture_raw_sign, fixture_norm_sign = sign_of(fixture_q['rawAdv']), sign_of(fixture_q['adv'])
+    for lang in ('en', 'ko'):
+        if lang == 'ko':
+            p.select_option('#language', 'ko')
+            p.wait_for_timeout(100)
+        raw_el = p.locator('[data-follow-stage="calculation"] [data-follow-sign="raw"]')
+        norm_el = p.locator('[data-follow-stage="calculation"] [data-follow-sign="normalized"]')
+        expected_raw = expected_sign_text(p, 'calcRaw', fixture_raw_sign, fixture_q['rawAdv'])
+        expected_norm = expected_sign_text(p, 'calcNorm', fixture_norm_sign, fixture_q['adv'])
+        check(f'{lang}: opposite-sign fixture raw indicator matches real A_raw sign', raw_el.get_attribute('data-follow-sign-value') == fixture_raw_sign, fixture_q['rawAdv'])
+        check(f'{lang}: opposite-sign fixture normalized indicator matches real A sign (differs from raw)', norm_el.get_attribute('data-follow-sign-value') == fixture_norm_sign, fixture_q['adv'])
+        check(f'{lang}: opposite-sign fixture raw line matches its exact localized text', raw_el.inner_text() == expected_raw, (raw_el.inner_text(), expected_raw))
+        check(f'{lang}: opposite-sign fixture normalized line matches its exact localized text', norm_el.inner_text() == expected_norm, (norm_el.inner_text(), expected_norm))
+        check(f'{lang}: raw and normalized wording differ for this real opposite-sign fixture', expected_raw != expected_norm)
+    p.select_option('#language', 'en')
+    close_guide(p)
+    p.select_option('#recordSelect', original_record)
+    p.wait_for_timeout(80)
 
     # Narrow/desktop widths, all 4 guide stages: no overflow, no bar/box overlap,
     # nav >=44px tall / >=14px labels.
@@ -284,6 +459,23 @@ def _run_checks(p):
                       all(s >= 14 for s in cell_font_sizes), cell_font_sizes)
                 cell_widths = p.eval_on_selector_all('.follow-input-grid > .term', 'es=>es.map(e=>e.getBoundingClientRect().width)')
                 check(f'{w}px input: no observation cell collapsed to zero width (clipped)', all(cw > 0 for cw in cell_widths), cell_widths)
+            if stage == 'calculation':
+                # Screenshot-found defect: at narrow 2-column widths the raw
+                # numeric tokens (e.g. "gamma*V(next)=97.811277") wrapped mid-digits
+                # inside their .term box, splitting a correct value across two
+                # lines. A DOM Range over each value's own text content -- not
+                # just the box's own client rect -- is the precise way to detect
+                # a forced mid-token line break.
+                calc_cols = p.evaluate("getComputedStyle(document.querySelector('.follow-calc-grid')).gridTemplateColumns.split(' ').length")
+                expected_calc_cols = 1 if w <= 600 else 4
+                check(f'{w}px calculation: term grid is a {expected_calc_cols}-column layout', calc_cols == expected_calc_cols, calc_cols)
+                value_line_counts = p.eval_on_selector_all(
+                    '[data-follow-stage="calculation"] .follow-calc-grid .term b',
+                    "es => es.map(e => { const r = document.createRange(); r.selectNodeContents(e); return r.getClientRects().length; })")
+                check(f'{w}px calculation: every numeric value stays on one DOM Range line (no mid-number wrap)',
+                      len(value_line_counts) == 6 and all(n == 1 for n in value_line_counts), value_line_counts)
+                calc_value_sizes = p.eval_on_selector_all('[data-follow-stage="calculation"] .follow-calc-grid .term b', 'es=>es.map(e=>parseFloat(getComputedStyle(e).fontSize))')
+                check(f'{w}px calculation: numeric values are >=14px, not shrunk to fit', all(s >= 14 for s in calc_value_sizes), calc_value_sizes)
         if w in (320, 1440):
             click_stage(p, 'result')
             p.screenshot(path=str(args.output / f'success_{w}_result.png'), full_page=True)
