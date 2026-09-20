@@ -142,6 +142,23 @@ def _run_checks(p):
     p.wait_for_timeout(80)
     check('Entry exists near the record picker, real record available', p.locator('#followExperience').count() == 1)
 
+    # Layout: the single #followExperience lives on the lesson side of
+    # .main-grid (adjacent to the world on desktop, immediately after the
+    # world card in DOM/narrow order), not above .main-grid in .sourcebar.
+    check('#followExperience is inside .lesson-card, not .sourcebar',
+          p.eval_on_selector('#followExperience', "e => !!e.closest('.lesson-card') && !e.closest('.sourcebar')"))
+    check('#followExperience is the lesson-card\'s first child (adjacent/early, before the chapter explanation)',
+          p.eval_on_selector('#followExperience', "e => e.parentElement.firstElementChild === e"))
+
+    # Default (guide closed): the chapter explanation and support material are
+    # NOT disclosures -- no visible summary affordance, fully open/normal.
+    check('Lesson explanation disclosure is open by default (normal exploration)', p.locator('#lessonDisclosure').evaluate('e=>e.open'))
+    check('Support disclosure is open by default (normal exploration)', p.locator('#supportDisclosure').evaluate('e=>e.open'))
+    check('Lesson disclosure summary is hidden by default (looks like plain content, not a second lesson toggle)',
+          not p.locator('#lessonDisclosure > summary').is_visible())
+    check('Support disclosure summary is hidden by default', not p.locator('#supportDisclosure > summary').is_visible())
+    check('Guide is closed by default so it never starts as a second simultaneously-expanded lesson', not is_open(p))
+
     # Start the live plant running so opening the guide has something real to pause.
     p.click('[data-chapter="1"]')
     if status()['paused']:
@@ -158,6 +175,38 @@ def _run_checks(p):
     check('Opening the guide is visible, labeled RECORDED, and populated', p.locator('.follow-panel').is_visible() and 'RECORDED' in p.locator('.follow-panel').inner_text().upper())
     check('Guide area names the sibling PPO/Transformer/DiffusionPolicy apps compactly, without a new large header',
           all(name in p.locator('.follow-panel').inner_text() for name in ('PPO', 'Transformer', 'DiffusionPolicy')) and p.locator('.follow-panel h1, .follow-panel h2').count() == 0)
+
+    # Opening the guide folds the chapter explanation and support reading
+    # material into explicit, closed-by-default named disclosures, so the
+    # guide is never a second simultaneously-expanded lesson.
+    check('Opening the guide marks the body as guide-active', p.evaluate("document.body.classList.contains('guide-active')"))
+    check('Opening the guide collapses the lesson-explanation disclosure (named, closed by default)',
+          not p.locator('#lessonDisclosure').evaluate('e=>e.open'))
+    check('Opening the guide collapses the support disclosure (named, closed by default)',
+          not p.locator('#supportDisclosure').evaluate('e=>e.open'))
+    check('Lesson-explanation disclosure summary becomes visible while the guide is open', p.locator('#lessonDisclosure > summary').is_visible())
+    check('Support disclosure summary becomes visible while the guide is open', p.locator('#supportDisclosure > summary').is_visible())
+    check('Collapsed lesson disclosure hides its chapter body content (no duplicated simultaneous lesson)',
+          not p.locator('#lessonBody').is_visible())
+    check('Collapsed support disclosure hides its content', not p.locator('#support').is_visible())
+
+    # Native <details> activation: click and keyboard (Enter/Space on the
+    # focused summary) both open the disclosure, and it stays a static shell
+    # (no reparenting/duplicate IDs) while toggling.
+    p.locator('#lessonDisclosure > summary').click()
+    p.wait_for_timeout(30)
+    check('Clicking the lesson-explanation summary expands it', p.locator('#lessonDisclosure').evaluate('e=>e.open'))
+    check('Expanding the lesson disclosure does not duplicate #lessonBody', p.locator('#lessonBody').count() == 1)
+    p.locator('#lessonDisclosure > summary').click()
+    p.wait_for_timeout(30)
+    check('Re-clicking the summary collapses it again', not p.locator('#lessonDisclosure').evaluate('e=>e.open'))
+    p.locator('#lessonDisclosure > summary').focus()
+    p.keyboard.press('Enter')
+    p.wait_for_timeout(30)
+    check('Keyboard Enter on the summary expands the lesson-explanation disclosure', p.locator('#lessonDisclosure').evaluate('e=>e.open'))
+    p.keyboard.press('Enter')
+    p.wait_for_timeout(30)
+    check('Keyboard Enter again collapses it back to the default closed state', not p.locator('#lessonDisclosure').evaluate('e=>e.open'))
 
     # 4 real stage-nav buttons, current stage marked, EN labels present.
     nav_buttons = p.locator('[data-follow-stage-nav]')
@@ -489,6 +538,18 @@ def _run_checks(p):
     close_guide(p)
     p.wait_for_timeout(400)
     check("Closing the guide does not auto-resume the plant it paused", status()['paused'])
+
+    # Closing the guide restores normal chapter exploration exactly as before
+    # opening: both disclosures fully open again, summaries hidden, no leftover
+    # guide-active chrome, and the plant/source picker are still present.
+    check('Closing the guide restores the lesson-explanation disclosure to open (normal exploration)', p.locator('#lessonDisclosure').evaluate('e=>e.open'))
+    check('Closing the guide restores the support disclosure to open', p.locator('#supportDisclosure').evaluate('e=>e.open'))
+    check('Closing the guide removes guide-active chrome', not p.evaluate("document.body.classList.contains('guide-active')"))
+    check('Closing the guide hides the disclosure summaries again', not p.locator('#lessonDisclosure > summary').is_visible() and not p.locator('#supportDisclosure > summary').is_visible())
+    check('Lesson explanation is directly visible again after closing the guide', p.locator('#lessonBody').is_visible())
+    check('Support material is directly visible again after closing the guide', p.locator('#support').is_visible())
+    check('Recorded plant/world card is still present after closing the guide', p.locator('.world-card').count() == 1)
+    check('Recorded-policy source picker is still present after closing the guide', p.locator('#recordPicker').count() == 1)
 
     check('No uncaught JavaScript errors', not report['errors'], report['errors'])
 

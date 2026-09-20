@@ -103,6 +103,26 @@ def _run_checks(p):
             p.click('#closeConditions')
     p.select_option('#language', 'en')
 
+    # #followExperience placement: adjacent to the world on desktop (shares the
+    # lesson column, side by side with the plant), immediately after the world
+    # card in narrow/stacked order -- never re-derives layout via JS, just the
+    # static two-column vs. single-column grid.
+    p.click('[data-chapter="1"]')
+    p.wait_for_timeout(60)
+    for w in (1440, 1024):
+        p.set_viewport_size({'width': w, 'height': VIEWPORT_HEIGHT})
+        world_rect = p.eval_on_selector('.world-card', 'e=>e.getBoundingClientRect().toJSON()')
+        guide_rect = p.eval_on_selector('#followExperience', 'e=>e.getBoundingClientRect().toJSON()')
+        check(f'{w}px desktop: #followExperience sits to the right of the plant, adjacent in the same row',
+              guide_rect['left'] >= world_rect['right'] - 0.5 and guide_rect['top'] < world_rect['bottom'],
+              {'world': world_rect, 'guide': guide_rect})
+    for w in NARROW:
+        p.set_viewport_size({'width': w, 'height': VIEWPORT_HEIGHT})
+        world_rect = p.eval_on_selector('.world-card', 'e=>e.getBoundingClientRect().toJSON()')
+        guide_rect = p.eval_on_selector('#followExperience', 'e=>e.getBoundingClientRect().toJSON()')
+        check(f'{w}px narrow: #followExperience appears immediately after the plant (stacked single column)',
+              guide_rect['top'] >= world_rect['bottom'] - 0.5, {'world': world_rect, 'guide': guide_rect})
+
     for w in NARROW:
         p.set_viewport_size({'width': w, 'height': VIEWPORT_HEIGHT})
         p.click('[data-chapter="1"]')

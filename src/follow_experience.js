@@ -12,11 +12,12 @@ function followBadge(id) { return `${sourceName(id.source)} I.${id.iter} · ${tr
 function pauseLiveForGuide() { releaseHold(); S.paused = true; S.lastTs = null; updateChrome(); }
 function openFollowGuide() {
     const c = calculation();
-    if (!c) { $('followExperience').open = false; toast(tr('follow.unavailable')); return; }
+    if (!c) { collapseFollowGuide(); toast(tr('follow.unavailable')); return; }
     pauseLiveForGuide();
     const id = followIdentity();
     S.followGuide = { id, badge: followBadge(id), c, g: Lesson.gae(c.q, c.record.hp) };
     S.followStage = 0;
+    syncGuideDisclosures();
     renderFollowGuide();
 }
 function recaptureFollowGuide() { openFollowGuide(); }
@@ -26,7 +27,18 @@ function followSignature(guide) {
         : `stale:${guide.badge}:${I18n.language}`;
 }
 function syncFollowGuide() { if (S.followGuide && $('followExperience')?.open) renderFollowGuide(); }
-function collapseFollowGuide() { if ($('followExperience')) $('followExperience').open = false; S.followGuide = null; }
+// The chapter explanation and support reading material stay a normal, always-open
+// lesson until the guide opens; then they fold into named native <details> so the
+// guide isn't a second simultaneously-expanded lesson. Closing the guide restores
+// the plain, always-visible layout (summary hidden again, details forced open).
+function syncGuideDisclosures() {
+    const open = !!$('followExperience')?.open;
+    document.body.classList.toggle('guide-active', open);
+    const lessonDisclosure = $('lessonDisclosure'), supportDisclosure = $('supportDisclosure');
+    if (lessonDisclosure) lessonDisclosure.open = !open;
+    if (supportDisclosure) supportDisclosure.open = !open;
+}
+function collapseFollowGuide() { if ($('followExperience')) $('followExperience').open = false; S.followGuide = null; syncGuideDisclosures(); }
 function followChapterLink(n) { return `<button class="text-btn small" data-follow-chapter="${n}">${tr('follow.jumpChapter', n, CHAPTERS[n][1])}</button>`; }
 function followStageContent(guide, stage) {
     const c = guide.c, g = guide.g, q = c.q, action = q.action ? tr('m0128') : tr('m0129'), i = FOLLOW_STAGES.indexOf(stage);
@@ -133,9 +145,12 @@ function renderFollowGuide() {
 }
 function initFollowExperience() {
     if (!$('followExperience')) return;
-    $('followExperience').addEventListener('toggle', () => { if ($('followExperience').open) openFollowGuide(); else S.followGuide = null; });
+    $('followExperience').addEventListener('toggle', () => {
+        if ($('followExperience').open) openFollowGuide(); else { S.followGuide = null; syncGuideDisclosures(); }
+    });
     const _updateHardwareReadout = updateHardwareReadout, _setChapter = setChapter, _setInterfaceLanguage = setInterfaceLanguage;
     updateHardwareReadout = (...a) => { _updateHardwareReadout(...a); syncFollowGuide(); };
     setChapter = (...a) => { _setChapter(...a); collapseFollowGuide(); };
     setInterfaceLanguage = (...a) => { _setInterfaceLanguage(...a); syncFollowGuide(); };
+    syncGuideDisclosures();
 }
