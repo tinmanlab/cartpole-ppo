@@ -246,14 +246,16 @@ def _run_checks(p):
     check('Chain equation actually sums: delta + future == A_raw at display precision',
           abs((chain_nums[0] + chain_nums[1]) - chain_nums[2]) < 5e-6, chain_nums)
     check('Target equation shows V_old and A_raw matching the frozen record, summing to Lesson.gae.target (NUM: 6dp)',
-          len(target_nums) == 3 and abs(target_nums[0] - calc_before['q']['oldV']) < 5e-4 and abs(target_nums[1] - gae['raw']) < 5e-6 and abs(target_nums[2] - gae['target']) < 5e-6,
+          len(target_nums) == 3 and abs(target_nums[0] - calc_before['q']['oldV']) < 5e-6 and abs(target_nums[1] - gae['raw']) < 5e-6 and abs(target_nums[2] - gae['target']) < 5e-6,
           (target_nums, gae))
     check('Target equation actually sums: V_old + A_raw == target at display precision',
-          # V_old is shown at F() 4dp while A_raw/target are NUM() 6dp, so the
-          # displayed sum can be off by up to half a 4dp rounding step.
-          abs((target_nums[0] + target_nums[1]) - target_nums[2]) < 5e-5, target_nums)
+          # All three operands are now shown at consistent NUM() 6dp precision.
+          abs((target_nums[0] + target_nums[1]) - target_nums[2]) < 5e-6, target_nums)
     check('"future" is explicitly distinguished from a future reward (not fabricated reward language)',
           'not a future reward' in calc_text.lower())
+    check('"future" TD-residual sum is scoped to this rollout\'s own episode segment, not every future step',
+          'episode segment' in calc_text.lower() and 'done boundary' in calc_text.lower())
+    check('Target equation discloses its operands are rounded for display', 'rounded for display' in calc_text.lower())
 
     # The chain's fuller explanation lives in a closed-by-default <details> --
     # tested both closed (visible summary only) and explicitly opened (deep
