@@ -59,7 +59,11 @@ function followStageContent(guide, stage) {
       <p class="inline-note" data-follow-sign="raw" data-follow-sign-value="${rawSign}">${rawSign === 'zero' ? tr(rawKey) : tr(rawKey, NUM(Math.abs(g.raw)))}</p>
       <p class="inline-note" data-follow-sign="normalized" data-follow-sign-value="${normSign}">${normSign === 'zero' ? tr(normKey) : tr(normKey, NUM(Math.abs(g.normalized)))}</p>
       <p class="inline-note">${tr('follow.calcSub')}</p>
-      <p class="inline-note">${tr('follow.calcSignCaveat')}</p>`);
+      <p class="inline-note">${tr('follow.calcSignCaveat')}</p>
+      <div class="math-line" data-follow-chain>δ + future = A_raw: ${NUM(g.delta)} + ${NUM(g.future)} = ${NUM(g.raw)}</div>
+      <div class="math-line" data-follow-target>V_old + A_raw = target: ${F(q.oldV, 4)} + ${NUM(g.raw)} = ${NUM(g.target)}</div>
+      <p class="inline-note">${tr('follow.calcChainNote')}</p>
+      <details class="follow-suite" data-follow-chain-details><summary>${tr('follow.calcChainDetailsSummary')}</summary><p class="inline-note">${tr('follow.calcChainDetails')}</p></details>`);
     }
     if (stage === 'action') {
         const collectionP = Math.exp(q.oldLogp), beforeP = c.pa[q.action];

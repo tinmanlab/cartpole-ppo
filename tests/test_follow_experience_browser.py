@@ -229,6 +229,45 @@ def _run_checks(p):
     check('Calculation caveat explicitly negates a guaranteed probability increase (correct negation, not the bug it negates)',
           'does not guarantee' in calc_text.lower())
 
+    # New arithmetic connection: current-step delta chains into the accumulated
+    # raw advantage (delta + future TD-residual sum = A_raw), and that raw
+    # advantage chains into the stored GAE value target (V_old + A_raw =
+    # target). Both read straight off the real Lesson.gae() object -- no
+    # second GAE/normalization is computed here.
+    chain_el = p.locator('[data-follow-stage="calculation"] [data-follow-chain]')
+    target_el = p.locator('[data-follow-stage="calculation"] [data-follow-target]')
+    check('Delta-to-advantage chain equation is visible in the calculation stage', chain_el.count() == 1)
+    check('Value-target equation is visible in the calculation stage', target_el.count() == 1)
+    chain_nums = [float(x) for x in re.findall(r'-?\d+\.\d+(?:e[+-]?\d+)?', chain_el.inner_text())]
+    target_nums = [float(x) for x in re.findall(r'-?\d+\.\d+(?:e[+-]?\d+)?', target_el.inner_text())]
+    check('Chain equation shows delta, future and A_raw matching Lesson.gae exactly (NUM: 6dp)',
+          len(chain_nums) == 3 and abs(chain_nums[0] - gae['delta']) < 5e-6 and abs(chain_nums[1] - gae['future']) < 5e-6 and abs(chain_nums[2] - gae['raw']) < 5e-6,
+          (chain_nums, gae))
+    check('Chain equation actually sums: delta + future == A_raw at display precision',
+          abs((chain_nums[0] + chain_nums[1]) - chain_nums[2]) < 5e-6, chain_nums)
+    check('Target equation shows V_old and A_raw matching the frozen record, summing to Lesson.gae.target (NUM: 6dp)',
+          len(target_nums) == 3 and abs(target_nums[0] - calc_before['q']['oldV']) < 5e-4 and abs(target_nums[1] - gae['raw']) < 5e-6 and abs(target_nums[2] - gae['target']) < 5e-6,
+          (target_nums, gae))
+    check('Target equation actually sums: V_old + A_raw == target at display precision',
+          # V_old is shown at F() 4dp while A_raw/target are NUM() 6dp, so the
+          # displayed sum can be off by up to half a 4dp rounding step.
+          abs((target_nums[0] + target_nums[1]) - target_nums[2]) < 5e-5, target_nums)
+    check('"future" is explicitly distinguished from a future reward (not fabricated reward language)',
+          'not a future reward' in calc_text.lower())
+
+    # The chain's fuller explanation lives in a closed-by-default <details> --
+    # tested both closed (visible summary only) and explicitly opened (deep
+    # copy actually present), never asserted while implicitly open.
+    chain_details = p.locator('[data-follow-stage="calculation"] details[data-follow-chain-details]')
+    check('Chain details element exists and is closed by default', chain_details.count() == 1 and not chain_details.evaluate('e=>e.open'))
+    summary_text = chain_details.locator('summary').inner_text()
+    check('Closed details shows only its summary text, not the deep copy', chain_details.inner_text() == summary_text)
+    chain_details.evaluate('e=>e.open=true')
+    p.wait_for_timeout(30)
+    opened_text = chain_details.inner_text()
+    check('Opened details reveals the deeper GAE walk-back explanation', 'γλ' in opened_text or 'gae' in opened_text.lower())
+    chain_details.evaluate('e=>e.open=false')
+
     click_stage(p, 'action')
     action_text = p.locator('[data-follow-stage="action"]').inner_text()
     check('Action stage distinguishes the recorded physical choice from the learning evaluation',
