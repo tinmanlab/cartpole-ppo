@@ -27,33 +27,57 @@ function followSignature(guide) {
 }
 function syncFollowGuide() { if (S.followGuide && $('followExperience')?.open) renderFollowGuide(); }
 function collapseFollowGuide() { if ($('followExperience')) $('followExperience').open = false; S.followGuide = null; }
+function followChapterLink(n) { return `<button class="text-btn small" data-follow-chapter="${n}">${tr('follow.jumpChapter', n, CHAPTERS[n][1])}</button>`; }
 function followStageContent(guide, stage) {
-    const c = guide.c, g = guide.g, q = c.q, action = q.action ? tr('m0128') : tr('m0129');
+    const c = guide.c, g = guide.g, q = c.q, action = q.action ? tr('m0128') : tr('m0129'), i = FOLLOW_STAGES.indexOf(stage);
+    const stageLabelKey = { input: 'follow.input', calculation: 'follow.calc', action: 'follow.action', result: 'follow.result' }[stage];
+    const shell = (inner) => `<div class="flow-box" data-follow-stage="${stage}" id="followPanel-${stage}" role="tabpanel" aria-labelledby="followTab-${i}" tabindex="0"><small>${tr(stageLabelKey)}</small>${inner}</div>`;
     if (stage === 'input') {
         const labels = [tr('m0111'), tr('m0112'), tr('m0113'), tr('m0114'), tr('m0115')];
-        return `<div class="flow-box" data-follow-stage="input"><small>${tr('follow.input')}</small>
+        return shell(`
+      <p class="tag neutral">${tr('follow.inputNormalized')}</p>
       <div class="follow-input-grid">${q.obs.map((v, i) => `<div class="term"><small>${labels[i]}</small><b>o${i + 1} = ${F(v, 5)}</b></div>`).join('')}</div>
-      <p class="inline-note">${tr('follow.inputSub', action, F(q.r, 4))}</p></div>`;
+      <p class="inline-note">${tr('follow.inputSub', action, F(q.r, 4))}</p>
+      ${followChapterLink(1)}`);
     }
     if (stage === 'calculation') {
-        return `<div class="flow-box" data-follow-stage="calculation"><small>${tr('follow.calc')}</small>
-      <div class="math-line">r=${F(q.r, 4)} + γV(next)=${NUM(g.bootstrap)} − V_old=${F(q.oldV, 4)} = δ=${NUM(g.delta)}</div>
-      <div class="math-line">A_raw=${NUM(g.raw)} → A=${NUM(g.normalized)}</div>
-      <p class="inline-note">${tr('follow.calcSub')}</p></div>`;
+        const sign = g.normalized >= 0 ? 'pos' : 'neg';
+        return shell(`
+      <div class="follow-calc-grid">
+        <div class="term"><small>${tr('follow.calcReward')}</small><b>r=${F(q.r, 4)}</b></div>
+        <div class="term"><small>${tr('follow.calcBootstrap')}</small><b>γV(next)=${NUM(g.bootstrap)}</b></div>
+        <div class="term"><small>${tr('follow.calcOldV')}</small><b>V_old=${F(q.oldV, 4)}</b></div>
+        <div class="term output"><small>${tr('follow.calcDelta')}</small><b>δ=${NUM(g.delta)}</b></div>
+      </div>
+      <div class="follow-calc-grid pair">
+        <div class="term"><small>${tr('follow.calcRaw')}</small><b>A_raw=${NUM(g.raw)}</b></div>
+        <div class="term output"><small>${tr('follow.calcNorm')}</small><b>A=${NUM(g.normalized)}</b></div>
+      </div>
+      <p class="inline-note" data-follow-sign="${sign}">${tr(sign === 'pos' ? 'follow.calcSignPos' : 'follow.calcSignNeg', NUM(Math.abs(g.normalized)))}</p>
+      <p class="inline-note">${tr('follow.calcSub')}</p>
+      <p class="inline-note">${tr('follow.calcSignCaveat')}</p>`);
     }
     if (stage === 'action') {
         const collectionP = Math.exp(q.oldLogp), beforeP = c.pa[q.action];
-        return `<div class="flow-box" data-follow-stage="action"><small>${tr('follow.action')}</small>
+        return shell(`
+      <p class="tag neutral">${tr('follow.actionRecordedHeading')}</p>
       <p>${tr('follow.actionChosen', action)}</p>
+      <p class="tag neutral">${tr('follow.actionEvalHeading')}</p>
       ${probRow(tr('m0156'), collectionP, C.muted)}${probRow(tr('m0157'), beforeP, C.blue)}
       <div class="math-line">ρ = ${F(beforeP, 4)} / ${F(collectionP, 4)} = ${F(c.loss.ratio, 4)}</div>
       <div class="mono">${c.loss.active ? tr('m0160') : tr('m0161')} · L = ${NUM(c.loss.loss)}</div>
-      <p class="inline-note">${tr('follow.actionSub')}</p></div>`;
+      <p class="inline-note">${tr('follow.actionSub')}</p>
+      ${followChapterLink(4)}`);
     }
-    return `<div class="flow-box" data-follow-stage="result"><small>${tr('follow.result')}</small>
+    const dp = c.afterP[q.action] - c.pa[q.action], w = Lesson.weight(c, 'actor', 0);
+    return shell(`
     ${probRow(tr('m0157'), c.pa[q.action], C.blue)}${probRow(tr('m0158'), c.afterP[q.action], C.green)}
+    <p class="mono" data-follow-delta>Δ = ${dp >= 0 ? '+' : ''}${F(dp * 100, 3)} pp</p>
     <p class="inline-note">${tr('follow.resultBadge')}</p>
-    <p class="warning">${tr('follow.minibatchWarning', c.d.batchData.length)}</p></div>`;
+    <p class="warning">${tr('follow.minibatchWarning', c.d.batchData.length)}</p>
+    <p class="mono" data-follow-weight data-follow-weight-kind="actor" data-follow-weight-index="0">${w.label}: ${NUM(w.before)} → ${NUM(w.after)} (Δ${NUM(w.delta)})</p>
+    <p class="inline-note">${tr('follow.weightWitnessNote')}</p>
+    ${followChapterLink(4)}`);
 }
 function renderFollowGuide() {
     const body = $('followExperienceBody');
@@ -61,6 +85,7 @@ function renderFollowGuide() {
     const guide = S.followGuide;
     const sig = followSignature(guide);
     if (guide.renderedSignature === sig && body.firstElementChild) return;
+    const focusOnNav = document.activeElement?.dataset?.followStageNav !== undefined;
     guide.renderedSignature = sig;
     if (!followIdentityMatches(guide.id)) {
         body.innerHTML = `<p class="tag neutral">${tr('follow.recordedLabel')}</p><p class="warning">${tr('follow.stale', guide.badge)}</p><button class="primary" id="followRecapture">${tr('follow.recapture')}</button>`;
@@ -69,16 +94,28 @@ function renderFollowGuide() {
     }
     const nav = `<div class="follow-nav" role="tablist">${FOLLOW_STAGES.map((stage, i) => {
         const label = [tr('follow.input'), tr('follow.calc'), tr('follow.action'), tr('follow.result')][i];
-        return `<button role="tab" aria-selected="${S.followStage === i}" aria-current="${S.followStage === i ? 'step' : 'false'}" data-follow-stage-nav="${i}" class="${S.followStage === i ? 'active' : ''}">${label}</button>`;
+        const active = S.followStage === i;
+        return `<button role="tab" id="followTab-${i}" aria-controls="followPanel-${stage}" aria-selected="${active}" aria-current="${active ? 'step' : 'false'}" tabindex="${active ? 0 : -1}" data-follow-stage-nav="${i}" class="${active ? 'active' : ''}">${label}</button>`;
     }).join('')}</div>`;
     const key = `${guide.id.source}:${guide.id.iter}:${guide.id.sample}:${guide.id.generation}`;
     body.innerHTML = `<div class="follow-panel" data-follow-key="${key}" data-follow-current-stage="${FOLLOW_STAGES[S.followStage]}">
     <p class="tag neutral">${tr('follow.recordedLabel')}</p>
     <p class="causal-lead">${tr('follow.lead', guide.badge)}</p>
+    <p class="inline-note">${tr('follow.suitePurpose')}</p>
     ${nav}
     ${followStageContent(guide, FOLLOW_STAGES[S.followStage])}
   </div>`;
-    body.querySelectorAll('[data-follow-stage-nav]').forEach(b => b.onclick = () => { S.followStage = +b.dataset.followStageNav; renderFollowGuide(); });
+    const gotoStage = i => { S.followStage = i; renderFollowGuide(); };
+    body.querySelectorAll('[data-follow-stage-nav]').forEach(b => b.onclick = () => gotoStage(+b.dataset.followStageNav));
+    body.querySelectorAll('[data-follow-chapter]').forEach(b => b.onclick = () => setChapter(+b.dataset.followChapter));
+    const navEl = body.querySelector('.follow-nav');
+    if (navEl) navEl.onkeydown = e => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+        e.preventDefault();
+        const n = FOLLOW_STAGES.length;
+        gotoStage(e.key === 'ArrowRight' ? (S.followStage + 1) % n : e.key === 'ArrowLeft' ? (S.followStage - 1 + n) % n : e.key === 'Home' ? 0 : n - 1);
+    };
+    if (focusOnNav) $(`followTab-${S.followStage}`)?.focus();
 }
 function initFollowExperience() {
     if (!$('followExperience')) return;

@@ -137,6 +137,8 @@ def _run_checks(p):
     open_guide(p)
     check('Opening the guide pauses the live plant', status()['paused'])
     check('Opening the guide is visible, labeled RECORDED, and populated', p.locator('.follow-panel').is_visible() and 'RECORDED' in p.locator('.follow-panel').inner_text().upper())
+    check('Guide area names the sibling PPO/Transformer/DiffusionPolicy apps compactly, without a new large header',
+          all(name in p.locator('.follow-panel').inner_text() for name in ('PPO', 'Transformer', 'DiffusionPolicy')) and p.locator('.follow-panel h1, .follow-panel h2').count() == 0)
 
     # 4 real stage-nav buttons, current stage marked, EN labels present.
     nav_buttons = p.locator('[data-follow-stage-nav]')
@@ -146,6 +148,16 @@ def _run_checks(p):
     sizes = p.eval_on_selector_all('[data-follow-stage-nav]', 'es=>es.map(e=>parseFloat(getComputedStyle(e).fontSize))')
     check('Stage-nav labels are >=14px', all(s >= 14 for s in sizes), sizes)
     check('Stage 0 (input) starts as the current stage', p.locator('[data-follow-stage-nav="0"]').get_attribute('aria-current') == 'step')
+
+    # F4: each tab is a real tab associated with its own tabpanel.
+    active_tab = p.locator('[data-follow-stage-nav="0"]')
+    check('Active tab has aria-controls pointing at a real, visible tabpanel',
+          p.eval_on_selector('#followTab-0', "e => { const panel = document.getElementById(e.getAttribute('aria-controls')); return !!panel && panel.getAttribute('role') === 'tabpanel' && panel.getAttribute('aria-labelledby') === 'followTab-0'; }"))
+
+    # F1: Input stage explicitly marks features as normalized/dimensionless.
+    input_text = p.locator('[data-follow-stage="input"]').inner_text()
+    check('Input stage explicitly says the five features are normalized/dimensionless, not physical units',
+          'normaliz' in input_text.lower() and 'dimensionless' in input_text.lower())
 
     key0 = follow_key(p)
     seen_stages = []
@@ -172,8 +184,18 @@ def _run_checks(p):
     check('Displayed GAE bootstrap matches Lesson.gae(q, hp).bootstrap (NUM: 6dp)', abs(bootstrap_shown - gae['bootstrap']) < 5e-6, (bootstrap_shown, gae['bootstrap']))
     check('Displayed GAE delta matches Lesson.gae(q, hp).delta (NUM: 6dp)', abs(delta_shown - gae['delta']) < 5e-6, (delta_shown, gae['delta']))
 
+    # F2: a signed advantage indicator shows the real sign/magnitude of A, without
+    # claiming a single positive advantage guarantees the probability increased.
+    sign_el = p.locator('[data-follow-stage="calculation"] [data-follow-sign]')
+    expected_sign = 'pos' if gae['normalized'] >= 0 else 'neg'
+    check('Calculation stage signed-advantage indicator matches the real sign of A', sign_el.get_attribute('data-follow-sign') == expected_sign, (expected_sign, gae['normalized']))
+    check('Signed-advantage text does not claim a guaranteed probability increase',
+          'guarantee' not in calc_text.lower())
+
     click_stage(p, 'action')
     action_text = p.locator('[data-follow-stage="action"]').inner_text()
+    check('Action stage distinguishes the recorded physical choice from the learning evaluation',
+          p.locator('[data-follow-stage="action"] .tag').count() >= 2)
     ratio_line = next(line for line in action_text.splitlines() if 'ρ' in line)
     before_p_shown, collection_p_shown, ratio_shown = (float(x) for x in re.findall(r'-?\d+\.\d+', ratio_line))
     check('Ratio line: before-update prob matches calculation().pa (F: 4dp)', abs(before_p_shown - calc_before['pa'][action]) < 5e-5, (before_p_shown, calc_before['pa'][action]))
@@ -188,6 +210,28 @@ def _run_checks(p):
     after_p_bar = bar_row_percent(p, 'result', 1)
     check('Result bar: before-update probability matches calculation().pa (probRow: %, 3dp)', abs(before_p_bar - calc_before['pa'][action]) < 5e-6, (before_p_bar, calc_before['pa'][action]))
     check('Result bar: after-update probability matches calculation().afterP (probRow: %, 3dp)', abs(after_p_bar - calc_before['afterP'][action]) < 5e-6, (after_p_bar, calc_before['afterP'][action]))
+
+    # F3: signed probability change in percentage points, correct unit and sign.
+    expected_dp_pp = (calc_before['afterP'][action] - calc_before['pa'][action]) * 100
+    delta_text = p.locator('[data-follow-stage="result"] [data-follow-delta]').inner_text()
+    check('Result shows the unit "pp" for the probability delta', 'pp' in delta_text, delta_text)
+    delta_shown_pp = float(re.search(r'(-?\+?[\d.]+)\s*pp', delta_text.replace('+', '')).group(1))
+    check('Signed probability-change delta (pp) matches after-before at display precision',
+          abs(delta_shown_pp - expected_dp_pp) < 5e-3, (delta_shown_pp, expected_dp_pp))
+    check('Positive probability delta is shown with an explicit + sign',
+          (expected_dp_pp >= 0) == ('+' in delta_text))
+
+    # F3: one accessible, real recorded optimizer-weight witness (Lesson.weight),
+    # matching the stored optimizer state exactly -- not a live/applied update.
+    weight_el = p.locator('[data-follow-stage="result"] [data-follow-weight]')
+    weight_kind, weight_index = weight_el.get_attribute('data-follow-weight-kind'), int(weight_el.get_attribute('data-follow-weight-index'))
+    expected_weight = p.evaluate(f"Lesson.weight(calculation(), '{weight_kind}', {weight_index})")
+    weight_text = weight_el.inner_text()
+    check('Weight witness label identifies the exact recorded weight', expected_weight['label'] in weight_text, (expected_weight['label'], weight_text))
+    nums = [float(x) for x in re.findall(r'-?\d+\.\d+(?:e[+-]?\d+)?', weight_text)]
+    check('Weight witness before/after/delta match the stored Lesson.weight exactly',
+          len(nums) >= 3 and abs(nums[0] - expected_weight['before']) < 1e-9 and abs(nums[1] - expected_weight['after']) < 1e-9,
+          (nums, expected_weight))
 
     # Recorded optimizer and live (frozen) policy are unchanged by inspection.
     check('Recorded optimizer snapshot unchanged by inspection', optimizer_identity() == before_optimizer)
@@ -216,6 +260,25 @@ def _run_checks(p):
     check('Keyboard Enter on a stage tab actually switches the shown stage',
           p.eval_on_selector('.follow-panel', 'e=>e.dataset.followCurrentStage') == 'result')
     click_stage(p, 'input')
+
+    # F4: real ArrowLeft/Right/Home/End tablist keyboard navigation, with focus
+    # returned to the newly active tab after the stage rerender.
+    p.locator('[data-follow-stage-nav="0"]').focus()
+    p.keyboard.press('ArrowRight')
+    p.wait_for_timeout(60)
+    check('ArrowRight moves from input to calculation', p.eval_on_selector('.follow-panel', 'e=>e.dataset.followCurrentStage') == 'calculation')
+    check('Focus returns to the newly active tab after ArrowRight', p.evaluate("document.activeElement && document.activeElement.dataset.followStageNav === '1'"))
+    p.keyboard.press('ArrowLeft')
+    p.wait_for_timeout(60)
+    check('ArrowLeft moves back from calculation to input', p.eval_on_selector('.follow-panel', 'e=>e.dataset.followCurrentStage') == 'input')
+    p.keyboard.press('End')
+    p.wait_for_timeout(60)
+    check('End jumps to the result stage', p.eval_on_selector('.follow-panel', 'e=>e.dataset.followCurrentStage') == 'result')
+    p.keyboard.press('Home')
+    p.wait_for_timeout(60)
+    check('Home jumps back to the input stage', p.eval_on_selector('.follow-panel', 'e=>e.dataset.followCurrentStage') == 'input')
+    check('Active tab keeps tabindex=0 and inactive tabs tabindex=-1 (roving tabindex)',
+          p.eval_on_selector_all('[data-follow-stage-nav]', "es => es.every(e => e.tabIndex === (e.dataset.followStageNav === '0' ? 0 : -1))"))
 
     # Changing the record invalidates the captured guide.
     p.select_option('#recordSource', 'robust')

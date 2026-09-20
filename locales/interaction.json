@@ -91,7 +91,22 @@
     "follow.lead": "Read-only inspection of {0}. It does not change the live policy, physics or optimizer.",
     "follow.minibatchWarning": "This policy change comes from the whole stored minibatch ({0} experiences), not this one experience alone. Reward, advantage and loss remain three different numbers.",
     "follow.recordedLabel": "RECORDED EXPERIENCE — not the current live plant",
-    "follow.actionChosen": "Recorded action: {0}"
+    "follow.actionChosen": "Recorded action: {0}",
+    "follow.inputNormalized": "Model input — normalized, dimensionless. Not physical metres, degrees or seconds.",
+    "follow.calcReward": "Reward r",
+    "follow.calcBootstrap": "Discounted next value γV(next)",
+    "follow.calcOldV": "Old value estimate V_old",
+    "follow.calcDelta": "Prediction error δ",
+    "follow.calcRaw": "Raw advantage A_raw",
+    "follow.calcNorm": "Normalized advantage A (used in the loss)",
+    "follow.calcSignPos": "Advantage is positive (+{0}): this experience did better than the Critic expected.",
+    "follow.calcSignNeg": "Advantage is negative (−{0}): this experience did worse than the Critic expected.",
+    "follow.calcSignCaveat": "A positive advantage does not guarantee this action's probability increased — the actual update comes from the whole minibatch, not this sample alone.",
+    "follow.actionRecordedHeading": "Recorded physical choice",
+    "follow.actionEvalHeading": "Learning evaluation — probability ratio, clipping, loss (not a force)",
+    "follow.weightWitnessNote": "This is one stored batch optimizer update, not live training; the live policy and optimizer are unchanged.",
+    "follow.jumpChapter": "See full detail → Chapter {0} · {1}",
+    "follow.suitePurpose": "Part of the CartPole learning suite: PPO (this app) learns a policy from experience; Transformer explains one decision via attention; DiffusionPolicy samples an action plan by denoising."
   },
   "ko": {
     "tip.title": "막대를 밀고, 제어기가 어떻게 반응하는지 보세요.",
@@ -185,6 +200,21 @@
     "follow.lead": "{0}의 읽기 전용 검사입니다. 실시간 정책, 물리, 옵티마이저를 바꾸지 않습니다.",
     "follow.minibatchWarning": "이 정책 변화는 이 한 경험이 아니라 저장된 미니배치 전체({0}개 경험)에서 나온 것입니다. 보상, 어드밴티지, 손실은 서로 다른 세 가지 수치입니다.",
     "follow.recordedLabel": "저장된 경험 — 현재 실시간 플랜트가 아닙니다",
-    "follow.actionChosen": "저장된 행동: {0}"
+    "follow.actionChosen": "저장된 행동: {0}",
+    "follow.inputNormalized": "모델 입력 — 정규화된 무차원 값입니다. 실제 미터·도·초 단위가 아닙니다.",
+    "follow.calcReward": "보상 r",
+    "follow.calcBootstrap": "할인된 다음 가치 γV(next)",
+    "follow.calcOldV": "이전 가치 추정 V_old",
+    "follow.calcDelta": "예측 오차 δ",
+    "follow.calcRaw": "원시 어드밴티지 A_raw",
+    "follow.calcNorm": "정규화된 어드밴티지 A (손실에 사용)",
+    "follow.calcSignPos": "어드밴티지가 양수입니다 (+{0}): 이 경험은 Critic의 예상보다 더 좋았습니다.",
+    "follow.calcSignNeg": "어드밴티지가 음수입니다 (−{0}): 이 경험은 Critic의 예상보다 더 나빴습니다.",
+    "follow.calcSignCaveat": "어드밴티지가 양수라고 해서 이 행동의 확률이 반드시 올랐다는 보장은 아닙니다 — 실제 업데이트는 이 샘플 하나가 아니라 미니배치 전체에서 나옵니다.",
+    "follow.actionRecordedHeading": "저장된 물리적 선택",
+    "follow.actionEvalHeading": "학습 평가 — 확률 비율·클리핑·손실 (힘이 아님)",
+    "follow.weightWitnessNote": "이는 저장된 배치 옵티마이저 업데이트 하나이며 실시간 학습이 아닙니다. 실시간 정책과 옵티마이저는 바뀌지 않습니다.",
+    "follow.jumpChapter": "자세히 보기 → {0}장 · {1}",
+    "follow.suitePurpose": "CartPole 학습 모음의 일부입니다: PPO(이 앱)는 경험으로 정책을 학습하고, Transformer는 어텐션으로 한 번의 결정을 설명하며, DiffusionPolicy는 디노이징으로 행동 계획을 샘플링합니다."
   }
 }
