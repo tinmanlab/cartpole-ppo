@@ -234,7 +234,142 @@ def _run_checks(p):
         check(f'{w}px companion inspector key numeric readouts are >=14px', len(term_font_sizes) > 0 and all(s >= 14 for s in term_font_sizes), term_font_sizes)
         p.click('[data-chapter="1"]')
 
+    _scene_force_provenance_checks(p)
     check('No uncaught JavaScript errors', not report['errors'], report['errors'])
+
+
+# Public visual-scene contract constants (src/app.js SCENE) -- documented shared
+# geometry, not a private implementation detail: replicated here to independently
+# verify the renderer and the #world click-to-goal handler agree, instead of
+# trusting the same source file to grade itself.
+SCENE = {'refW': 640, 'refH': 320, 'worldScale': 110, 'centerX': 320}
+OLD_ARROW_COLORS = [(0x32, 0x7d, 0xe0), (0xc5, 0x7b, 0x20), (0xb8, 0x92, 0x62), (0xdb, 0xb8, 0x86)]
+
+
+def _canvas_has_color(p, selector, rgb, tolerance=2):
+    return p.eval_on_selector(selector, '''(canvas, [r, g, b, tol]) => {
+        const ctx = canvas.getContext('2d');
+        const {width, height} = canvas;
+        const data = ctx.getImageData(0, 0, width, height).data;
+        for (let i = 0; i < data.length; i += 4) {
+            if (Math.abs(data[i] - r) <= tol && Math.abs(data[i + 1] - g) <= tol && Math.abs(data[i + 2] - b) <= tol && data[i + 3] > 200)
+                return true;
+        }
+        return false;
+    }''', list(rgb) + [tolerance])
+
+
+def _click_target_x(p, w, goal_x):
+    """Click the track at a screen position corresponding to a known physical
+    goal_x (inside +-1, the slider's real clip range), using the SAME public
+    SCENE constants the renderer uses, and read back the real physics goal
+    (PPOStep.status().liveGoal) that the click actually set -- not a UI label."""
+    rect = p.eval_on_selector('#world', 'e=>e.getBoundingClientRect().toJSON()')
+    k = min(rect['width'] / SCENE['refW'], rect['height'] / SCENE['refH'])
+    ox = (rect['width'] - SCENE['refW'] * k) / 2
+    ref_x = SCENE['centerX'] + goal_x * SCENE['worldScale']
+    pos_x = ox + ref_x * k
+    pos_y = rect['height'] * 0.8
+    p.locator('#world').click(position={'x': pos_x, 'y': pos_y})
+    p.wait_for_timeout(60)
+    goal = p.evaluate('window.PPOStep.status().liveGoal')
+    check(f'{w}px click-to-goal: clicking physical x={goal_x} m sets the real plant goal within one slider step',
+          goal is not None and abs(goal - goal_x) <= 0.051, {'requested': goal_x, 'actualLiveGoal': goal, 'rect': rect, 'k': k})
+
+
+def _scene_force_provenance_checks(p):
+    p.set_viewport_size({'width': 1024, 'height': VIEWPORT_HEIGHT})
+    p.click('[data-chapter="1"]')
+    p.wait_for_timeout(80)
+
+    contract = p.eval_on_selector('#world', 'e=>e.dataset.sceneContract')
+    check('#world exposes data-scene-contract="cartpole-v1"', contract == 'cartpole-v1', contract)
+
+    # No leftover pixels from the removed in-canvas force arrows (blue/amber) or
+    # the old brown pole fill -- real pixel inspection, not trust in markup.
+    for color in OLD_ARROW_COLORS:
+        present = _canvas_has_color(p, '#world', color)
+        check(f'#world canvas has no leftover pixels of removed color rgb{color}', not present, color)
+
+    # The canvas is a live render tied to real physics, not a static image.
+    before = p.eval_on_selector('#world', "c=>c.toDataURL()")
+    p.click('#singleStep')
+    p.wait_for_timeout(60)
+    after = p.eval_on_selector('#world', "c=>c.toDataURL()")
+    check('#world canvas pixels actually change after a real physics step', before != after, None)
+
+    # Force lane: same scene() event the renderer just drew from, read together
+    # with the DOM in one synchronous call so there is no render-vs-read race.
+    zero_read = p.evaluate('''() => {
+        window.updateForceLane();
+        const el = document.getElementById('forceLane');
+        const items = Array.from(el.querySelectorAll('.force-item strong')).map(e => e.textContent.trim());
+        const f = window.PPOStep.scene();
+        return {items, f};
+    }''')
+    external_n = float(zero_read['items'][2].split(' ')[0])
+    tip_n = float(zero_read['items'][3].split(' ')[0])
+    check('force lane shows numeric 0.00 N (not blank/omitted) when external force is at rest',
+          external_n == 0.0 and '0.00' in zero_read['items'][2], zero_read['items'])
+    check('force lane external/tip readouts equal the real scene() values at rest',
+          abs(external_n - (zero_read['f'].get('externalForce') or 0)) < 0.005
+          and abs(tip_n - (zero_read['f'].get('tipForce') or 0)) < 0.005, zero_read)
+
+    # A long-running suite may have let the episode terminate (autoReset is off
+    # by default), or left it paused (#singleStep above intentionally pauses,
+    # same as the real UI); beginHold() correctly refuses both. Use the real
+    # app entry points (resetWorld()/#playWorld) to restore a fresh, running
+    # live episode instead of poking internal state.
+    st = p.evaluate('window.PPOStep.status()')
+    if st['liveTerminated'] or st['liveTruncated']:
+        p.evaluate('window.resetWorld()')
+        p.wait_for_timeout(60)
+    if p.evaluate('window.PPOStep.status().paused'):
+        p.click('#playWorld')
+        p.wait_for_timeout(60)
+
+    # Drive a real held tip-force via the actual interaction path (beginHold/
+    # heldForce/physics()), not a mocked value, then read command/delivered/tip
+    # together against the same real scene() the lane renders from.
+    p.evaluate("window.beginHold('provenance_probe', 1)")
+    p.wait_for_timeout(400)
+    hold_read = p.evaluate('''() => {
+        window.updateForceLane();
+        const el = document.getElementById('forceLane');
+        const items = Array.from(el.querySelectorAll('.force-item strong')).map(e => e.textContent.trim());
+        const labels = Array.from(el.querySelectorAll('.force-item small')).map(e => e.textContent.trim());
+        const f = window.PPOStep.scene();
+        window.releaseHold();
+        return {items, labels, f};
+    }''')
+    cmd_n = float(hold_read['items'][0].split(' ')[0])
+    delivered_n = float(hold_read['items'][1].split(' ')[0])
+    tip_n2 = float(hold_read['items'][3].split(' ')[0])
+    f = hold_read['f']
+    delivered_real = (f.get('drive') or {}).get('contactForce')
+    if delivered_real is None:
+        delivered_real = f.get('motorForce') or 0
+    check('force lane "commanded" equals real scene().command (the recorded/commanded force), not delivered',
+          abs(cmd_n - (f.get('command') or 0)) < 0.01, hold_read)
+    check('force lane "delivered" equals real actuator-delivered force (drive.contactForce/motorForce), not the raw command',
+          abs(delivered_n - delivered_real) < 0.01, hold_read)
+    total_incl_disturbance = (f.get('command') or 0) + (f.get('externalForce') or 0) + (f.get('tipForce') or 0)
+    check('commanded/delivered are never silently redefined as "total force incl. disturbance" (delivered != command+external+tip while a real disturbance is active)',
+          abs(f.get('tipForce') or 0) < 1e-9 or abs(delivered_real - total_incl_disturbance) > 1e-6, {'delivered': delivered_real, 'totalInclDisturbance': total_incl_disturbance, **f})
+    check('held tip-push actually produced a nonzero real tip force (real interaction path, not a mock)',
+          abs(f.get('tipForce') or 0) > 0.0001, f.get('tipForce'))
+    check('force lane "tip-applied" reading matches the real scene().tipForce for this exact event',
+          abs(tip_n2 - (f.get('tipForce') or 0)) < 0.01, hold_read)
+    check('tip-applied label says "tip", not "cart"', 'tip' in hold_read['labels'][3].lower() and 'cart' not in hold_read['labels'][3].lower(), hold_read['labels'])
+
+    # Click-to-goal <-> letterboxed renderer agreement at 320/390/1440.
+    for w in (320, 390, 1440):
+        p.set_viewport_size({'width': w, 'height': VIEWPORT_HEIGHT})
+        p.click('[data-chapter="1"]')
+        p.wait_for_timeout(80)
+        _click_target_x(p, w, 0.6)
+        _click_target_x(p, w, -0.35)
+    p.set_viewport_size({'width': 1024, 'height': VIEWPORT_HEIGHT})
 
 
 if __name__ == '__main__':

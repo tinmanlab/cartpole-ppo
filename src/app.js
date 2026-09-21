@@ -237,6 +237,20 @@ function startReplay(trace, policySnap, name) { releaseHold(); if (!trace?.lengt
 } S.replay = { trace, name }; S.replayAt = 0; S.replayAcc = 0; S.replayPlaying = false; S.replayActor = MLP.from(policySnap.actor); S.replayCritic = MLP.from(policySnap.critic); S.mode = 'replay'; S.lastTs = null; render(); }
 function replaySelected() { const r = selected(), src=S.source; if (r)
     startReplay(r.evaluation.trace, r.policy, ()=>tr("m0031", sourceName(src), r.iter)); }
+function updateForceLane() {
+    const el = $('forceLane');
+    if (!el)
+        return;
+    const f = scene();
+    if (!f) { el.innerHTML = ''; return; }
+    const rows = [
+        [tr('force.command'), f.command ?? 0, '#16805d'],
+        [tr('force.delivered'), f.drive?.contactForce ?? f.motorForce ?? 0, '#16805d'],
+        [tr('force.external'), f.externalForce || 0, '#b86b16'],
+        [tr('force.tip'), f.tipForce || 0, '#b86b16'],
+    ];
+    el.innerHTML = rows.map(([label, val, color]) => `<div class="force-item" style="color:${color}"><small>${label}</small><strong>${F(val, 2)} N</strong></div>`).join('');
+}
 function updateChrome() {
     const sample = isSample(), replay = !sample && S.mode === 'replay';
     const r = selected(), c = sample ? calculation() : null;
@@ -266,6 +280,7 @@ function updateChrome() {
         $('replayPlay').textContent = S.replayPlaying ? 'Ⅱ' : '▶';
         $('replayBack').disabled = S.replayAt === 0;
         $('replayNext').disabled = S.replayAt === S.replay.trace.length - 1;
+        $('replayPosition').textContent = `${S.replayAt + 1} / ${S.replay.trace.length}`;
     }
     const f = scene();
     $('worldValues').innerHTML = f ? [[tr("m0055"), F(f.s[0], 3)], [tr("m0056"), F(f.s[1], 3)], [tr("m0057"), F(f.s[2] * 180 / Math.PI, 2)], [tr("m0058"), F(f.s[3], 3)], [tr("m0059"), F(f.reward, 4)]].map(([k, v]) => `<div><small>${k}</small><strong>${v}</strong></div>`).join('') : tr("m0060");
@@ -273,6 +288,7 @@ function updateChrome() {
     $('worldOverlay').hidden = !ended;
     $('worldOverlay').textContent = ended ? (S.env.validityLimit ? tr("m0061") : S.env.terminated ? tr("m0062", Math.abs(S.env.s[0]) > 2.4 ? tr("m0063") : tr("m0064")) : tr("m0065")) + ($('autoReset').checked ? tr("m0066") : tr("m0067")) : '';
     updateControlStatus();
+    updateForceLane();
     $('footerSource').textContent = sample ? tr("m0068", sourceName(), S.selected, S.sample + 1) : tr("m0069");
 }
 function render() {
@@ -563,10 +579,8 @@ function ctx(canvas) { if (!canvas || !canvas.getClientRects().length)
 function text(g, t, x, y, color = C.muted, size = 10, align = 'left') { g.fillStyle = color; g.font = `${size}px 'Noto Sans CJK KR','Segoe UI',sans-serif`; g.textAlign = align; g.fillText(String(t), x, y); }
 function line(g, x, y, xx, yy, color = C.grid, width = 1, dash = []) { g.strokeStyle = color; g.lineWidth = width; g.setLineDash(dash); g.beginPath(); g.moveTo(x, y); g.lineTo(xx, yy); g.stroke(); g.setLineDash([]); }
 function round(g, x, y, w, h, fill, r = 5) { g.fillStyle = fill; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); }
-function arrow(g, x, y, dx, color, title) { if (Math.abs(dx) < 1)
-    return; line(g, x, y, x + dx, y, color, 2); const s = Math.sign(dx); line(g, x + dx, y, x + dx - s * 5, y - 4, color, 2); line(g, x + dx, y, x + dx - s * 5, y + 4, color, 2); if (title)
-    text(g, title, x + dx / 2, y - 9, color, 9, 'center'); }
-function geometry(w, h) { const scale = Math.min((w - 45) / 5.35, (h - 62) / 1.55); return { scale, cx: w / 2, ground: h - 38 }; }
+const SCENE = { refW: 640, refH: 320, worldScale: 110, centerX: 320, trackX0: 56, trackX1: 584, cartW: 78, cartH: 28, cartY: 202, wheelR: 9, wheelDx: 24, railY: 251, poleLen: 132, poleThick: 7, bg: '#ffffff', cart: '#334155', pole: '#dc5b60', rail: '#cbd5e1' };
+function geometry(w, h) { const k = Math.min(w / SCENE.refW, h / SCENE.refH), ox = (w - SCENE.refW * k) / 2, oy = (h - SCENE.refH * k) / 2; return { k, ox, oy, x: rx => ox + rx * k, y: ry => oy + ry * k }; }
 function drawWorld() {
     if (!S.env)
         return;
@@ -574,49 +588,32 @@ function drawWorld() {
     if (!a)
         return;
     const { g, w, h } = a, f = scene();
-    g.fillStyle = '#f9fcff';
+    g.fillStyle = SCENE.bg;
     g.fillRect(0, 0, w, h);
     if (!f) {
         text(g, tr("m0221"), w / 2, h / 2, C.muted, 12, 'center');
         return;
     }
-    const s = (!isSample() ? f.ns : f.s) || f.s, { scale, cx, ground } = geometry(w, h);
-    for (let x = -2.5; x <= 2.5; x += .5)
-        line(g, cx + x * scale, 22, cx + x * scale, ground, '#eaf0f6');
-    line(g, cx - 2.5 * scale, ground, cx + 2.5 * scale, ground, '#8fa2b3', 2);
-    line(g, cx - 2.5 * scale, ground + 4, cx + 2.5 * scale, ground + 4, '#dce5ed');
-    const gx = cx + f.goal * scale;
-    round(g, gx - .15 * scale, ground - 6, .3 * scale, 12, '#e0f2e7', 2);
-    line(g, gx, ground - 81, gx, ground + 7, '#74b499', 1, [3, 4]);
-    text(g, tr("m0222", F(f.goal, 2)), gx, ground - 86, '#218c62', 10, 'center');
+    const s = (!isSample() ? f.ns : f.s) || f.s, { k, x: X, y: Y } = geometry(w, h);
+    line(g, X(SCENE.trackX0), Y(SCENE.railY), X(SCENE.trackX1), Y(SCENE.railY), SCENE.rail, Math.max(1, 2 * k));
     for (const x of [-2.4, -1.2, 0, 1.2, 2.4]) {
-        const px = cx + x * scale;
-        line(g, px, ground + 7, px, ground + 11, '#a9b8c6');
-        text(g, F(x, 1), px, ground + 25, C.muted, 9, 'center');
+        const px = SCENE.centerX + x * SCENE.worldScale;
+        line(g, X(px), Y(SCENE.railY), X(px), Y(SCENE.railY + 4), SCENE.rail);
+        text(g, F(x, 1), X(px), Y(SCENE.railY + 18), C.muted, 9, 'center');
     }
     for (const x of [-2.4, 2.4])
-        line(g, cx + x * scale, ground - 40, cx + x * scale, ground + 4, '#d7a5a4', 1, [3, 4]);
-    const px = cx + s[0] * scale, py = ground - Plant.WHEEL.radius * scale - 10, cw = Math.max(36, scale * .48), poleLength = (f.params?.l || .5) * 2 * scale, pivot = py - 11, tipX = px + Math.sin(s[2]) * poleLength, tipY = pivot - Math.cos(s[2]) * poleLength;
-    line(g, px, pivot, px, pivot - poleLength, '#b9c9d8', 1, [3, 4]);
-    round(g, px - cw / 2, py - 10, cw, 21, '#25384a', 4);
-    for (const dx of [-cw * .3, cw * .3]) {
-        renderWheelMesh(g, px + dx, ground - Plant.WHEEL.radius * scale, Plant.WHEEL.radius * scale, -s[0] / Plant.WHEEL.radius);
-    }
-    line(g, px, pivot, tipX, tipY, '#b89262', 7);
-    line(g, px + 1, pivot, tipX + 1, tipY, '#dbb886', 2);
-    g.fillStyle = '#293b4d';
+        line(g, X(SCENE.centerX + x * SCENE.worldScale), Y(SCENE.cartY - 40), X(SCENE.centerX + x * SCENE.worldScale), Y(SCENE.railY + 4), '#d7a5a4', Math.max(1, k), [3, 4]);
+    const gx = SCENE.centerX + f.goal * SCENE.worldScale;
+    line(g, X(gx), Y(20), X(gx), Y(SCENE.railY + 4), '#74b499', Math.max(1, k), [3, 4]);
+    const pivotX = SCENE.centerX + s[0] * SCENE.worldScale, poleLen = SCENE.poleLen * ((f.params?.l ?? .5) / .5), tipX = pivotX + Math.sin(s[2]) * poleLen, tipY = SCENE.cartY - Math.cos(s[2]) * poleLen;
+    round(g, X(pivotX - SCENE.cartW / 2), Y(SCENE.cartY), SCENE.cartW * k, SCENE.cartH * k, SCENE.cart, 4 * k);
+    for (const dx of [-SCENE.wheelDx, SCENE.wheelDx])
+        renderWheelMesh(g, X(pivotX + dx), Y(SCENE.railY - SCENE.wheelR), SCENE.wheelR * k, -s[0] / Plant.WHEEL.radius);
+    line(g, X(pivotX), Y(SCENE.cartY), X(tipX), Y(tipY), SCENE.pole, Math.max(1, SCENE.poleThick * k));
+    g.fillStyle = SCENE.cart;
     g.beginPath();
-    g.arc(px, pivot, 4, 0, Math.PI * 2);
+    g.arc(X(pivotX), Y(SCENE.cartY), Math.max(2, 3 * k), 0, Math.PI * 2);
     g.fill();
-    arrow(g, px, ground - 46, Math.sign(f.drive?.contactForce ?? f.motorForce ?? 0) * 29, C.blue, tr('tip.wheelArrow', F(f.drive?.contactForce ?? f.motorForce ?? 0, 2)));
-    if (Math.abs(f.tipForce || 0) > .00001) {
-        g.strokeStyle = C.amber; g.lineWidth = 2; g.beginPath(); g.arc(tipX, tipY, 5, 0, Math.PI * 2); g.stroke();
-        arrow(g, tipX, tipY, Math.sign(f.tipForce) * 42, C.amber, tr('tip.arrow', F(f.tipForce, 2)));
-    }
-    if (Math.abs(f.externalForce || 0) > .001)
-        arrow(g, px, ground - 66, Math.sign(f.externalForce) * Math.min(85, 20 + Math.abs(f.externalForce) * 3), C.amber, tr("m0223", F(f.externalForce, 1)));
-    text(g, isSample() ? tr("m0224", f.env + 1, f.step) : S.mode === 'replay' ? tr("m0225", S.replayAt + 1, S.replay.trace.length) : tr("m0226", F(S.env.steps * DT, 2)), 12, 18, C.muted, 9);
-    text(g, 'x: ±2.4 m  /  θ: ±12°', w - 12, 18, C.muted, 9, 'right');
 }
 function plot(canvas, series, domain, ymin, ymax, unit = '', bounds = []) {
     const a = ctx(canvas);
@@ -766,8 +763,10 @@ $('notes').addEventListener('click', e => { if (e.target === $('notes')) {
         $('notes').close();
 } });
 $('world').onpointerdown = e => { if (isSample() || S.mode === 'replay')
-    return; const r = $('world').getBoundingClientRect(), geo = geometry(r.width, r.height); if (e.clientY - r.top > r.height * .55)
-    setGoal((e.clientX - r.left - geo.cx) / geo.scale); };
+    return; const r = $('world').getBoundingClientRect(), geo = geometry(r.width, r.height); if (e.clientY - r.top > r.height * .55) {
+    const refX = (e.clientX - r.left - geo.ox) / geo.k;
+    setGoal((refX - SCENE.centerX) / SCENE.worldScale);
+} };
 window.addEventListener('keydown', e => { if ($('notes').open || $('conditions').open || ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName) || e.repeat)
     return; if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
     e.preventDefault();
@@ -790,7 +789,7 @@ window.addEventListener('keydown', e => { if ($('notes').open || $('conditions')
 document.addEventListener('visibilitychange', () => { releaseHold(); S.hidden = document.hidden; S.lastTs = null; clearTimeout(S.timer); if (!S.hidden)
     schedule(); updateChrome(); });
 window.addEventListener('resize', () => { drawWorld(); drawAux(); });
-window.PPOStep = Object.freeze({ status: () => ({ heldForce:heldForce(), holdSeconds:HOLD.appliedSeconds, holdImpulse:HOLD.impulse, policyCalls:HOLD.policyCalls, tipForce:S.env?.lastOut?.tipForce||0, failureReason:S.env?.lastOut?.failureReason||null, language: I18n.language, physicsVersion: "planar-bam/2", trainingPlant: copy(S.activeHp?.plant), testPlant: copy(S.env?.spec), trainingPlan: S.activeHp?.plan, curriculum: copy(S.currentCurriculum || null), drive: copy(S.env?.lastOut?.drive || null), netMode: S.netMode, netLive: S.netLive, chapter: S.chapter, source: S.source, record: S.selected, sample: S.sample, sampleID: calculation()?.q.id ?? null, kind: S.kind, neuron: S.neuron, weight: S.weight, forward: S.forward, update: S.update, calcPlaying: S.calcPlaying, ready: S.ready, busy: S.busy, running: S.running, latestIteration: S.latest?.iter || 0, trainingProfile: S.activeHp?.profile, appliedIteration: S.applied?.iter || 0, appliedSource: S.appliedSource, followPolicy: S.followPolicy, mode: isSample() ? 'sample' : S.mode, paused: S.paused, liveStep: S.env?.steps, liveState: S.env?.s.slice(), liveGoal: S.env?.goal, liveTerminated: S.env?.terminated, liveTruncated: S.env?.truncated, physicsSteps: S.physicsCount, manualSteps: S.manualSteps, clockSteps: S.clock.steps, wall: S.clock.wall, sim: S.clock.sim, rt: S.clock.ratio(), debt: S.clock.acc, resets: S.resets, pulseSteps: S.pulseSteps, userForce: S.env?.lastOut?.userForce || 0, autoReset: $('autoReset').checked, timeCap: $('timeCap').checked, replayAt: S.replayAt, replayPlaying: S.replayPlaying, evaluation: S.latest ? { mean: S.latest.evaluation.mean, passed: S.latest.evaluation.reached, tailError: S.latest.evaluation.tailError } : null, evalBusy: S.evalBusy, evalPolicy: policyLabelForEvaluation(), evalRows: S.evalRows ? copy(S.evalRows.map(r => ({ name: r.condition.key, passed: r.passed, mean: r.mean, reachedPulse: r.reachedPulse, completedPulse: r.completedPulse, invalid: r.invalid, failureCounts: r.failureCounts }))) : null, records: DATA.own.size }), record: (i) => DATA.own.has(i) ? copy(DATA.own.get(i)) : null, selected: () => copy(selected()), calculation: () => { const c = calculation(); return c ? { q: copy(c.q), pa: c.pa, collectionP: c.collectionP, afterP: c.afterP, loss: copy(c.loss), weight: Lesson.weight(c, S.kind, Math.min(S.weight, c.models[S.kind].p.length - 1)) } : null; } });
+window.PPOStep = Object.freeze({ status: () => ({ heldForce:heldForce(), holdSeconds:HOLD.appliedSeconds, holdImpulse:HOLD.impulse, policyCalls:HOLD.policyCalls, tipForce:S.env?.lastOut?.tipForce||0, failureReason:S.env?.lastOut?.failureReason||null, language: I18n.language, physicsVersion: "planar-bam/2", trainingPlant: copy(S.activeHp?.plant), testPlant: copy(S.env?.spec), trainingPlan: S.activeHp?.plan, curriculum: copy(S.currentCurriculum || null), drive: copy(S.env?.lastOut?.drive || null), netMode: S.netMode, netLive: S.netLive, chapter: S.chapter, source: S.source, record: S.selected, sample: S.sample, sampleID: calculation()?.q.id ?? null, kind: S.kind, neuron: S.neuron, weight: S.weight, forward: S.forward, update: S.update, calcPlaying: S.calcPlaying, ready: S.ready, busy: S.busy, running: S.running, latestIteration: S.latest?.iter || 0, trainingProfile: S.activeHp?.profile, appliedIteration: S.applied?.iter || 0, appliedSource: S.appliedSource, followPolicy: S.followPolicy, mode: isSample() ? 'sample' : S.mode, paused: S.paused, liveStep: S.env?.steps, liveState: S.env?.s.slice(), liveGoal: S.env?.goal, liveTerminated: S.env?.terminated, liveTruncated: S.env?.truncated, physicsSteps: S.physicsCount, manualSteps: S.manualSteps, clockSteps: S.clock.steps, wall: S.clock.wall, sim: S.clock.sim, rt: S.clock.ratio(), debt: S.clock.acc, resets: S.resets, pulseSteps: S.pulseSteps, userForce: S.env?.lastOut?.userForce || 0, autoReset: $('autoReset').checked, timeCap: $('timeCap').checked, replayAt: S.replayAt, replayPlaying: S.replayPlaying, evaluation: S.latest ? { mean: S.latest.evaluation.mean, passed: S.latest.evaluation.reached, tailError: S.latest.evaluation.tailError } : null, evalBusy: S.evalBusy, evalPolicy: policyLabelForEvaluation(), evalRows: S.evalRows ? copy(S.evalRows.map(r => ({ name: r.condition.key, passed: r.passed, mean: r.mean, reachedPulse: r.reachedPulse, completedPulse: r.completedPulse, invalid: r.invalid, failureCounts: r.failureCounts }))) : null, records: DATA.own.size }), record: (i) => DATA.own.has(i) ? copy(DATA.own.get(i)) : null, selected: () => copy(selected()), scene: () => copy(scene()), calculation: () => { const c = calculation(); return c ? { q: copy(c.q), pa: c.pa, collectionP: c.collectionP, afterP: c.afterP, loss: copy(c.loss), weight: Lesson.weight(c, S.kind, Math.min(S.weight, c.models[S.kind].p.length - 1)) } : null; } });
 /* EXTENSION */
 S.env = new CartPole(new RNG(20260915), { profile: 'nominal', seed: 993581, spec: P.DEFAULT_SPEC });
 S.env.enforceTimeLimit = false;
