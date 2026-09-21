@@ -182,6 +182,31 @@ def _run_checks(p):
         cell_rects = p.eval_on_selector_all('.world-values > div', 'es=>es.map(e=>e.getBoundingClientRect().toJSON())')
         check(f'{w}px world-values cells do not overlap each other', len(cell_rects) == 5 and no_overlaps(cell_rects), cell_rects)
 
+        # Force lane collapses to 2 columns under 600px (src/style.css
+        # @media(max-width:600px)), label sits above its value in each cell,
+        # cells never overlap, essential text stays >=14px, and the numeric
+        # N-value renders as one unbroken token (white-space:nowrap).
+        fl_cols = p.evaluate("getComputedStyle(document.querySelector('.force-lane')).gridTemplateColumns.split(' ').length")
+        check(f'{w}px force-lane is a 2-column layout', fl_cols == 2, fl_cols)
+        fl_sizes = stable_font_sizes(p, '.force-lane small, .force-lane strong')
+        check(f'{w}px force-lane text is >=14px', all(s >= 14 for s in fl_sizes), fl_sizes)
+        fl_measured = p.evaluate('''() => Array.from(document.querySelectorAll('.force-item')).map(cell => {
+            const small = cell.querySelector('small').getBoundingClientRect();
+            const strong = cell.querySelector('strong');
+            const strongRect = strong.getBoundingClientRect();
+            return {
+                cell: cell.getBoundingClientRect().toJSON(),
+                labelAboveValue: small.bottom <= strongRect.top + 0.5,
+                nowrap: getComputedStyle(strong).whiteSpace === 'nowrap',
+                text: strong.textContent.trim(),
+            };
+        })''')
+        check(f'{w}px force-lane has 4 cells (commanded/delivered/external/tip)', len(fl_measured) == 4, fl_measured)
+        check(f'{w}px force-lane label sits above its value in every cell', all(m['labelAboveValue'] for m in fl_measured), fl_measured)
+        check(f'{w}px force-lane numeric value is a single unbroken token (nowrap)', all(m['nowrap'] for m in fl_measured), fl_measured)
+        fl_cell_rects = [m['cell'] for m in fl_measured]
+        check(f'{w}px force-lane cells do not overlap each other', no_overlaps(fl_cell_rects), fl_cell_rects)
+
         # Primary touch controls stay >=44px tall.
         heights = {sel: p.locator(sel).bounding_box()['height'] for sel in PRIMARY_CONTROLS}
         check(f'{w}px primary controls are >=44px tall', all(h >= 44 for h in heights.values()), heights)
