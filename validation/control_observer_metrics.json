@@ -1,0 +1,1142 @@
+{
+  "schema": "cartpole-control-observer-evaluation/v1",
+  "steps": 300,
+  "push": {
+    "at": 120,
+    "force": 3,
+    "steps": 10
+  },
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "rows": [
+    {
+      "scenario": "nominal",
+      "controller": "pid",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.00808863349538381,
+      "meanMaxAngleDeg": 2.8410757700237945
+    },
+    {
+      "scenario": "nominal",
+      "controller": "pid",
+      "observer": "raw",
+      "failures": 0,
+      "meanStateRmse": 0.3242188618309563,
+      "meanMaxAngleDeg": 2.9351310375896498
+    },
+    {
+      "scenario": "nominal",
+      "controller": "pid",
+      "observer": "kf",
+      "failures": 0,
+      "meanStateRmse": 0.05301643531038468,
+      "meanMaxAngleDeg": 4.9262208821277085
+    },
+    {
+      "scenario": "nominal",
+      "controller": "pid",
+      "observer": "ekf",
+      "failures": 0,
+      "meanStateRmse": 0.051004958065255165,
+      "meanMaxAngleDeg": 4.745118419132511
+    },
+    {
+      "scenario": "nominal",
+      "controller": "pid",
+      "observer": "so2",
+      "failures": 0,
+      "meanStateRmse": 0.051004958065255165,
+      "meanMaxAngleDeg": 4.745118419132511
+    },
+    {
+      "scenario": "nominal",
+      "controller": "pid",
+      "observer": "residual",
+      "failures": 0,
+      "meanStateRmse": 0.1083612089818018,
+      "meanMaxAngleDeg": 7.272741230809541
+    },
+    {
+      "scenario": "nominal",
+      "controller": "pid",
+      "observer": "adaptive",
+      "failures": 0,
+      "meanStateRmse": 0.06257747946274568,
+      "meanMaxAngleDeg": 7.479972850278183
+    },
+    {
+      "scenario": "nominal",
+      "controller": "lqr",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.0075478494589232325,
+      "meanMaxAngleDeg": 2.3554208737645563
+    },
+    {
+      "scenario": "nominal",
+      "controller": "lqr",
+      "observer": "raw",
+      "failures": 0,
+      "meanStateRmse": 0.32410140170228835,
+      "meanMaxAngleDeg": 2.656430271360363
+    },
+    {
+      "scenario": "nominal",
+      "controller": "lqr",
+      "observer": "kf",
+      "failures": 0,
+      "meanStateRmse": 0.05421389963429525,
+      "meanMaxAngleDeg": 4.370265233431062
+    },
+    {
+      "scenario": "nominal",
+      "controller": "lqr",
+      "observer": "ekf",
+      "failures": 0,
+      "meanStateRmse": 0.05199482357557929,
+      "meanMaxAngleDeg": 4.170719429176399
+    },
+    {
+      "scenario": "nominal",
+      "controller": "lqr",
+      "observer": "so2",
+      "failures": 0,
+      "meanStateRmse": 0.05199482357557929,
+      "meanMaxAngleDeg": 4.170719429176399
+    },
+    {
+      "scenario": "nominal",
+      "controller": "lqr",
+      "observer": "residual",
+      "failures": 0,
+      "meanStateRmse": 0.0978107456047251,
+      "meanMaxAngleDeg": 8.047051258564458
+    },
+    {
+      "scenario": "nominal",
+      "controller": "lqr",
+      "observer": "adaptive",
+      "failures": 0,
+      "meanStateRmse": 0.06231735672927623,
+      "meanMaxAngleDeg": 6.8377898559724075
+    },
+    {
+      "scenario": "nominal",
+      "controller": "mpc",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.010537798195685247,
+      "meanMaxAngleDeg": 5.077060026156046
+    },
+    {
+      "scenario": "nominal",
+      "controller": "mpc",
+      "observer": "raw",
+      "failures": 0,
+      "meanStateRmse": 0.31843608336255,
+      "meanMaxAngleDeg": 5.0369280607095
+    },
+    {
+      "scenario": "nominal",
+      "controller": "mpc",
+      "observer": "kf",
+      "failures": 2,
+      "meanStateRmse": 0.052986042928592325,
+      "meanMaxAngleDeg": 8.128763840504005
+    },
+    {
+      "scenario": "nominal",
+      "controller": "mpc",
+      "observer": "ekf",
+      "failures": 2,
+      "meanStateRmse": 0.05178040914271183,
+      "meanMaxAngleDeg": 7.862699637669357
+    },
+    {
+      "scenario": "nominal",
+      "controller": "mpc",
+      "observer": "so2",
+      "failures": 2,
+      "meanStateRmse": 0.05178040914271183,
+      "meanMaxAngleDeg": 7.862699637669357
+    },
+    {
+      "scenario": "nominal",
+      "controller": "mpc",
+      "observer": "residual",
+      "failures": 5,
+      "meanStateRmse": 0.16359640766427908,
+      "meanMaxAngleDeg": 5.181955412603007
+    },
+    {
+      "scenario": "nominal",
+      "controller": "mpc",
+      "observer": "adaptive",
+      "failures": 4,
+      "meanStateRmse": 0.07088484969602579,
+      "meanMaxAngleDeg": 11.533484786454995
+    },
+    {
+      "scenario": "nominal",
+      "controller": "ppo",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.1751756438304906,
+      "meanMaxAngleDeg": 0.9094728207864566
+    },
+    {
+      "scenario": "nominal",
+      "controller": "ppo",
+      "observer": "raw",
+      "failures": 1,
+      "meanStateRmse": 0.34104756360467925,
+      "meanMaxAngleDeg": 15.751422007420164
+    },
+    {
+      "scenario": "nominal",
+      "controller": "ppo",
+      "observer": "kf",
+      "failures": 0,
+      "meanStateRmse": 0.19366063367374795,
+      "meanMaxAngleDeg": 1.686516226319882
+    },
+    {
+      "scenario": "nominal",
+      "controller": "ppo",
+      "observer": "ekf",
+      "failures": 0,
+      "meanStateRmse": 0.18377555932626202,
+      "meanMaxAngleDeg": 1.9480266284280172
+    },
+    {
+      "scenario": "nominal",
+      "controller": "ppo",
+      "observer": "so2",
+      "failures": 0,
+      "meanStateRmse": 0.18377555932626202,
+      "meanMaxAngleDeg": 1.9480266284280172
+    },
+    {
+      "scenario": "nominal",
+      "controller": "ppo",
+      "observer": "residual",
+      "failures": 5,
+      "meanStateRmse": 0.2170035337192507,
+      "meanMaxAngleDeg": 35.39681659744471
+    },
+    {
+      "scenario": "nominal",
+      "controller": "ppo",
+      "observer": "adaptive",
+      "failures": 0,
+      "meanStateRmse": 0.18518722977453034,
+      "meanMaxAngleDeg": 3.0194675581706796
+    },
+    {
+      "scenario": "sensor",
+      "controller": "pid",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.00808863349538381,
+      "meanMaxAngleDeg": 2.8410757700237945
+    },
+    {
+      "scenario": "sensor",
+      "controller": "pid",
+      "observer": "raw",
+      "failures": 3,
+      "meanStateRmse": 2.310474069783171,
+      "meanMaxAngleDeg": 25.54212282633953
+    },
+    {
+      "scenario": "sensor",
+      "controller": "pid",
+      "observer": "kf",
+      "failures": 0,
+      "meanStateRmse": 0.252049964882445,
+      "meanMaxAngleDeg": 5.270527360542722
+    },
+    {
+      "scenario": "sensor",
+      "controller": "pid",
+      "observer": "ekf",
+      "failures": 0,
+      "meanStateRmse": 0.25213883996002023,
+      "meanMaxAngleDeg": 5.263266955301397
+    },
+    {
+      "scenario": "sensor",
+      "controller": "pid",
+      "observer": "so2",
+      "failures": 0,
+      "meanStateRmse": 0.25213883996002023,
+      "meanMaxAngleDeg": 5.263266955301397
+    },
+    {
+      "scenario": "sensor",
+      "controller": "pid",
+      "observer": "residual",
+      "failures": 0,
+      "meanStateRmse": 0.1915392559286742,
+      "meanMaxAngleDeg": 6.826716393327823
+    },
+    {
+      "scenario": "sensor",
+      "controller": "pid",
+      "observer": "adaptive",
+      "failures": 0,
+      "meanStateRmse": 0.10724671526694118,
+      "meanMaxAngleDeg": 8.362680644551073
+    },
+    {
+      "scenario": "sensor",
+      "controller": "lqr",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.0075478494589232325,
+      "meanMaxAngleDeg": 2.3554208737645563
+    },
+    {
+      "scenario": "sensor",
+      "controller": "lqr",
+      "observer": "raw",
+      "failures": 5,
+      "meanStateRmse": 2.2764685743286464,
+      "meanMaxAngleDeg": 35.45305428112022
+    },
+    {
+      "scenario": "sensor",
+      "controller": "lqr",
+      "observer": "kf",
+      "failures": 0,
+      "meanStateRmse": 0.25861068387978176,
+      "meanMaxAngleDeg": 5.072591003506833
+    },
+    {
+      "scenario": "sensor",
+      "controller": "lqr",
+      "observer": "ekf",
+      "failures": 0,
+      "meanStateRmse": 0.2582471609773755,
+      "meanMaxAngleDeg": 5.065101692690052
+    },
+    {
+      "scenario": "sensor",
+      "controller": "lqr",
+      "observer": "so2",
+      "failures": 0,
+      "meanStateRmse": 0.2582471609773755,
+      "meanMaxAngleDeg": 5.065101692690052
+    },
+    {
+      "scenario": "sensor",
+      "controller": "lqr",
+      "observer": "residual",
+      "failures": 0,
+      "meanStateRmse": 0.18344249048728006,
+      "meanMaxAngleDeg": 6.493794878771013
+    },
+    {
+      "scenario": "sensor",
+      "controller": "lqr",
+      "observer": "adaptive",
+      "failures": 0,
+      "meanStateRmse": 0.10869225974986849,
+      "meanMaxAngleDeg": 7.960359624887233
+    },
+    {
+      "scenario": "sensor",
+      "controller": "mpc",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.010537798195685247,
+      "meanMaxAngleDeg": 5.077060026156046
+    },
+    {
+      "scenario": "sensor",
+      "controller": "mpc",
+      "observer": "raw",
+      "failures": 2,
+      "meanStateRmse": 2.321017796988536,
+      "meanMaxAngleDeg": 4.505133637616438
+    },
+    {
+      "scenario": "sensor",
+      "controller": "mpc",
+      "observer": "kf",
+      "failures": 3,
+      "meanStateRmse": 0.2593042686753374,
+      "meanMaxAngleDeg": 7.664088315246787
+    },
+    {
+      "scenario": "sensor",
+      "controller": "mpc",
+      "observer": "ekf",
+      "failures": 3,
+      "meanStateRmse": 0.26074567898895007,
+      "meanMaxAngleDeg": 7.533718116128479
+    },
+    {
+      "scenario": "sensor",
+      "controller": "mpc",
+      "observer": "so2",
+      "failures": 3,
+      "meanStateRmse": 0.26074567898895007,
+      "meanMaxAngleDeg": 7.533718116128479
+    },
+    {
+      "scenario": "sensor",
+      "controller": "mpc",
+      "observer": "residual",
+      "failures": 5,
+      "meanStateRmse": 0.2755877899384066,
+      "meanMaxAngleDeg": 9.141679702548046
+    },
+    {
+      "scenario": "sensor",
+      "controller": "mpc",
+      "observer": "adaptive",
+      "failures": 3,
+      "meanStateRmse": 0.12205516487934412,
+      "meanMaxAngleDeg": 11.875990777696718
+    },
+    {
+      "scenario": "sensor",
+      "controller": "ppo",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.1751756438304906,
+      "meanMaxAngleDeg": 0.9094728207864566
+    },
+    {
+      "scenario": "sensor",
+      "controller": "ppo",
+      "observer": "raw",
+      "failures": 5,
+      "meanStateRmse": 2.3818426271731354,
+      "meanMaxAngleDeg": 36.160658495610825
+    },
+    {
+      "scenario": "sensor",
+      "controller": "ppo",
+      "observer": "kf",
+      "failures": 0,
+      "meanStateRmse": 0.29520087159481456,
+      "meanMaxAngleDeg": 11.014178139117885
+    },
+    {
+      "scenario": "sensor",
+      "controller": "ppo",
+      "observer": "ekf",
+      "failures": 1,
+      "meanStateRmse": 0.29243889522467414,
+      "meanMaxAngleDeg": 17.27304594341864
+    },
+    {
+      "scenario": "sensor",
+      "controller": "ppo",
+      "observer": "so2",
+      "failures": 1,
+      "meanStateRmse": 0.29243889522467414,
+      "meanMaxAngleDeg": 17.27304594341864
+    },
+    {
+      "scenario": "sensor",
+      "controller": "ppo",
+      "observer": "residual",
+      "failures": 3,
+      "meanStateRmse": 0.29655224201053754,
+      "meanMaxAngleDeg": 29.540038374379844
+    },
+    {
+      "scenario": "sensor",
+      "controller": "ppo",
+      "observer": "adaptive",
+      "failures": 1,
+      "meanStateRmse": 0.21585597413755836,
+      "meanMaxAngleDeg": 12.633693189391522
+    },
+    {
+      "scenario": "model",
+      "controller": "pid",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.007030917491546528,
+      "meanMaxAngleDeg": 2.766630002572305
+    },
+    {
+      "scenario": "model",
+      "controller": "pid",
+      "observer": "raw",
+      "failures": 0,
+      "meanStateRmse": 0.47788444658472795,
+      "meanMaxAngleDeg": 2.867384671868259
+    },
+    {
+      "scenario": "model",
+      "controller": "pid",
+      "observer": "kf",
+      "failures": 0,
+      "meanStateRmse": 0.0656994299778118,
+      "meanMaxAngleDeg": 4.49489687730521
+    },
+    {
+      "scenario": "model",
+      "controller": "pid",
+      "observer": "ekf",
+      "failures": 0,
+      "meanStateRmse": 0.0631829604953786,
+      "meanMaxAngleDeg": 4.303784604700991
+    },
+    {
+      "scenario": "model",
+      "controller": "pid",
+      "observer": "so2",
+      "failures": 0,
+      "meanStateRmse": 0.0631829604953786,
+      "meanMaxAngleDeg": 4.303784604700991
+    },
+    {
+      "scenario": "model",
+      "controller": "pid",
+      "observer": "residual",
+      "failures": 0,
+      "meanStateRmse": 0.12162097396595846,
+      "meanMaxAngleDeg": 7.174250461968274
+    },
+    {
+      "scenario": "model",
+      "controller": "pid",
+      "observer": "adaptive",
+      "failures": 0,
+      "meanStateRmse": 0.061146073030485235,
+      "meanMaxAngleDeg": 6.381720458423349
+    },
+    {
+      "scenario": "model",
+      "controller": "lqr",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.006756881797629427,
+      "meanMaxAngleDeg": 2.350024897848102
+    },
+    {
+      "scenario": "model",
+      "controller": "lqr",
+      "observer": "raw",
+      "failures": 0,
+      "meanStateRmse": 0.47442024916835707,
+      "meanMaxAngleDeg": 3.2746759006056956
+    },
+    {
+      "scenario": "model",
+      "controller": "lqr",
+      "observer": "kf",
+      "failures": 0,
+      "meanStateRmse": 0.06731020145886589,
+      "meanMaxAngleDeg": 4.012174208215143
+    },
+    {
+      "scenario": "model",
+      "controller": "lqr",
+      "observer": "ekf",
+      "failures": 0,
+      "meanStateRmse": 0.0645104989290414,
+      "meanMaxAngleDeg": 3.8115791211664884
+    },
+    {
+      "scenario": "model",
+      "controller": "lqr",
+      "observer": "so2",
+      "failures": 0,
+      "meanStateRmse": 0.0645104989290414,
+      "meanMaxAngleDeg": 3.8115791211664884
+    },
+    {
+      "scenario": "model",
+      "controller": "lqr",
+      "observer": "residual",
+      "failures": 0,
+      "meanStateRmse": 0.11400764149117608,
+      "meanMaxAngleDeg": 8.094754672020313
+    },
+    {
+      "scenario": "model",
+      "controller": "lqr",
+      "observer": "adaptive",
+      "failures": 0,
+      "meanStateRmse": 0.06155951045901094,
+      "meanMaxAngleDeg": 5.867327194183247
+    },
+    {
+      "scenario": "model",
+      "controller": "mpc",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.009004076436507403,
+      "meanMaxAngleDeg": 4.371061358846948
+    },
+    {
+      "scenario": "model",
+      "controller": "mpc",
+      "observer": "raw",
+      "failures": 2,
+      "meanStateRmse": 0.473950649792645,
+      "meanMaxAngleDeg": 4.501672182200546
+    },
+    {
+      "scenario": "model",
+      "controller": "mpc",
+      "observer": "kf",
+      "failures": 4,
+      "meanStateRmse": 0.06609966586448832,
+      "meanMaxAngleDeg": 6.940078466291163
+    },
+    {
+      "scenario": "model",
+      "controller": "mpc",
+      "observer": "ekf",
+      "failures": 4,
+      "meanStateRmse": 0.06382213951242531,
+      "meanMaxAngleDeg": 6.533563122692944
+    },
+    {
+      "scenario": "model",
+      "controller": "mpc",
+      "observer": "so2",
+      "failures": 4,
+      "meanStateRmse": 0.06382213951242531,
+      "meanMaxAngleDeg": 6.533563122692944
+    },
+    {
+      "scenario": "model",
+      "controller": "mpc",
+      "observer": "residual",
+      "failures": 5,
+      "meanStateRmse": 0.17562603241824729,
+      "meanMaxAngleDeg": 8.754002486978036
+    },
+    {
+      "scenario": "model",
+      "controller": "mpc",
+      "observer": "adaptive",
+      "failures": 3,
+      "meanStateRmse": 0.060622501823159536,
+      "meanMaxAngleDeg": 7.85175822974892
+    },
+    {
+      "scenario": "model",
+      "controller": "ppo",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.1291300438687833,
+      "meanMaxAngleDeg": 0.9520614925412272
+    },
+    {
+      "scenario": "model",
+      "controller": "ppo",
+      "observer": "raw",
+      "failures": 5,
+      "meanStateRmse": 0.47717945949329615,
+      "meanMaxAngleDeg": 35.686759676225776
+    },
+    {
+      "scenario": "model",
+      "controller": "ppo",
+      "observer": "kf",
+      "failures": 0,
+      "meanStateRmse": 0.17847761807936488,
+      "meanMaxAngleDeg": 2.2979794514286698
+    },
+    {
+      "scenario": "model",
+      "controller": "ppo",
+      "observer": "ekf",
+      "failures": 0,
+      "meanStateRmse": 0.16569255910705055,
+      "meanMaxAngleDeg": 2.467841195955912
+    },
+    {
+      "scenario": "model",
+      "controller": "ppo",
+      "observer": "so2",
+      "failures": 0,
+      "meanStateRmse": 0.16569255910705055,
+      "meanMaxAngleDeg": 2.467841195955912
+    },
+    {
+      "scenario": "model",
+      "controller": "ppo",
+      "observer": "residual",
+      "failures": 5,
+      "meanStateRmse": 0.14502335212031614,
+      "meanMaxAngleDeg": 35.97978302796304
+    },
+    {
+      "scenario": "model",
+      "controller": "ppo",
+      "observer": "adaptive",
+      "failures": 0,
+      "meanStateRmse": 0.16818696985321074,
+      "meanMaxAngleDeg": 3.603226568873806
+    },
+    {
+      "scenario": "mixed",
+      "controller": "pid",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.007225217730462689,
+      "meanMaxAngleDeg": 2.7871459940026795
+    },
+    {
+      "scenario": "mixed",
+      "controller": "pid",
+      "observer": "raw",
+      "failures": 0,
+      "meanStateRmse": 1.5464808093870186,
+      "meanMaxAngleDeg": 14.758614003019801
+    },
+    {
+      "scenario": "mixed",
+      "controller": "pid",
+      "observer": "kf",
+      "failures": 0,
+      "meanStateRmse": 0.173130508888899,
+      "meanMaxAngleDeg": 4.504585655957312
+    },
+    {
+      "scenario": "mixed",
+      "controller": "pid",
+      "observer": "ekf",
+      "failures": 0,
+      "meanStateRmse": 0.17212232030483365,
+      "meanMaxAngleDeg": 4.424317884877145
+    },
+    {
+      "scenario": "mixed",
+      "controller": "pid",
+      "observer": "so2",
+      "failures": 0,
+      "meanStateRmse": 0.17212232030483365,
+      "meanMaxAngleDeg": 4.424317884877145
+    },
+    {
+      "scenario": "mixed",
+      "controller": "pid",
+      "observer": "residual",
+      "failures": 0,
+      "meanStateRmse": 0.154946108768041,
+      "meanMaxAngleDeg": 6.99714314514561
+    },
+    {
+      "scenario": "mixed",
+      "controller": "pid",
+      "observer": "adaptive",
+      "failures": 0,
+      "meanStateRmse": 0.08798399602215994,
+      "meanMaxAngleDeg": 6.775188681174231
+    },
+    {
+      "scenario": "mixed",
+      "controller": "lqr",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.006883083580277602,
+      "meanMaxAngleDeg": 2.3454336294239053
+    },
+    {
+      "scenario": "mixed",
+      "controller": "lqr",
+      "observer": "raw",
+      "failures": 5,
+      "meanStateRmse": 1.5597774916361413,
+      "meanMaxAngleDeg": 33.57227441066351
+    },
+    {
+      "scenario": "mixed",
+      "controller": "lqr",
+      "observer": "kf",
+      "failures": 0,
+      "meanStateRmse": 0.17787946107886024,
+      "meanMaxAngleDeg": 4.266503114988319
+    },
+    {
+      "scenario": "mixed",
+      "controller": "lqr",
+      "observer": "ekf",
+      "failures": 0,
+      "meanStateRmse": 0.1763335716141649,
+      "meanMaxAngleDeg": 4.125540325151978
+    },
+    {
+      "scenario": "mixed",
+      "controller": "lqr",
+      "observer": "so2",
+      "failures": 0,
+      "meanStateRmse": 0.1763335716141649,
+      "meanMaxAngleDeg": 4.125540325151978
+    },
+    {
+      "scenario": "mixed",
+      "controller": "lqr",
+      "observer": "residual",
+      "failures": 0,
+      "meanStateRmse": 0.14434225215021587,
+      "meanMaxAngleDeg": 6.753281761467099
+    },
+    {
+      "scenario": "mixed",
+      "controller": "lqr",
+      "observer": "adaptive",
+      "failures": 0,
+      "meanStateRmse": 0.08898511384402327,
+      "meanMaxAngleDeg": 6.140375561850604
+    },
+    {
+      "scenario": "mixed",
+      "controller": "mpc",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.009258927486156575,
+      "meanMaxAngleDeg": 4.448266669132308
+    },
+    {
+      "scenario": "mixed",
+      "controller": "mpc",
+      "observer": "raw",
+      "failures": 4,
+      "meanStateRmse": 1.5569832355409323,
+      "meanMaxAngleDeg": 4.398370570457501
+    },
+    {
+      "scenario": "mixed",
+      "controller": "mpc",
+      "observer": "kf",
+      "failures": 3,
+      "meanStateRmse": 0.18257349412106572,
+      "meanMaxAngleDeg": 7.937573467086899
+    },
+    {
+      "scenario": "mixed",
+      "controller": "mpc",
+      "observer": "ekf",
+      "failures": 3,
+      "meanStateRmse": 0.1821252781900412,
+      "meanMaxAngleDeg": 7.521229691692812
+    },
+    {
+      "scenario": "mixed",
+      "controller": "mpc",
+      "observer": "so2",
+      "failures": 3,
+      "meanStateRmse": 0.1821252781900412,
+      "meanMaxAngleDeg": 7.521229691692812
+    },
+    {
+      "scenario": "mixed",
+      "controller": "mpc",
+      "observer": "residual",
+      "failures": 5,
+      "meanStateRmse": 0.22740952632430783,
+      "meanMaxAngleDeg": 11.359814680286163
+    },
+    {
+      "scenario": "mixed",
+      "controller": "mpc",
+      "observer": "adaptive",
+      "failures": 5,
+      "meanStateRmse": 0.10365739851351823,
+      "meanMaxAngleDeg": 11.0166415468333
+    },
+    {
+      "scenario": "mixed",
+      "controller": "ppo",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.13808456889065085,
+      "meanMaxAngleDeg": 0.9406083227100396
+    },
+    {
+      "scenario": "mixed",
+      "controller": "ppo",
+      "observer": "raw",
+      "failures": 5,
+      "meanStateRmse": 1.520317228725992,
+      "meanMaxAngleDeg": 36.424736430361776
+    },
+    {
+      "scenario": "mixed",
+      "controller": "ppo",
+      "observer": "kf",
+      "failures": 1,
+      "meanStateRmse": 0.23859027419119197,
+      "meanMaxAngleDeg": 12.214348824458309
+    },
+    {
+      "scenario": "mixed",
+      "controller": "ppo",
+      "observer": "ekf",
+      "failures": 0,
+      "meanStateRmse": 0.22289118745521508,
+      "meanMaxAngleDeg": 9.146639248107837
+    },
+    {
+      "scenario": "mixed",
+      "controller": "ppo",
+      "observer": "so2",
+      "failures": 0,
+      "meanStateRmse": 0.22289118745521508,
+      "meanMaxAngleDeg": 9.146639248107837
+    },
+    {
+      "scenario": "mixed",
+      "controller": "ppo",
+      "observer": "residual",
+      "failures": 5,
+      "meanStateRmse": 0.20820947863854883,
+      "meanMaxAngleDeg": 35.2807734991454
+    },
+    {
+      "scenario": "mixed",
+      "controller": "ppo",
+      "observer": "adaptive",
+      "failures": 0,
+      "meanStateRmse": 0.18388696717096772,
+      "meanMaxAngleDeg": 5.5561423234965375
+    },
+    {
+      "scenario": "glitch",
+      "controller": "pid",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.00808863349538381,
+      "meanMaxAngleDeg": 2.8410757700237945
+    },
+    {
+      "scenario": "glitch",
+      "controller": "pid",
+      "observer": "raw",
+      "failures": 0,
+      "meanStateRmse": 1.118621076412166,
+      "meanMaxAngleDeg": 2.6543180970467835
+    },
+    {
+      "scenario": "glitch",
+      "controller": "pid",
+      "observer": "kf",
+      "failures": 0,
+      "meanStateRmse": 0.2930294586391365,
+      "meanMaxAngleDeg": 5.496574393195704
+    },
+    {
+      "scenario": "glitch",
+      "controller": "pid",
+      "observer": "ekf",
+      "failures": 0,
+      "meanStateRmse": 0.289864020280389,
+      "meanMaxAngleDeg": 5.657515468499807
+    },
+    {
+      "scenario": "glitch",
+      "controller": "pid",
+      "observer": "so2",
+      "failures": 0,
+      "meanStateRmse": 0.289864020280389,
+      "meanMaxAngleDeg": 5.657515468499807
+    },
+    {
+      "scenario": "glitch",
+      "controller": "pid",
+      "observer": "residual",
+      "failures": 0,
+      "meanStateRmse": 0.2456016205654999,
+      "meanMaxAngleDeg": 7.731520302420724
+    },
+    {
+      "scenario": "glitch",
+      "controller": "pid",
+      "observer": "adaptive",
+      "failures": 0,
+      "meanStateRmse": 0.21064231209696413,
+      "meanMaxAngleDeg": 4.767480788776406
+    },
+    {
+      "scenario": "glitch",
+      "controller": "lqr",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.0075478494589232325,
+      "meanMaxAngleDeg": 2.3554208737645563
+    },
+    {
+      "scenario": "glitch",
+      "controller": "lqr",
+      "observer": "raw",
+      "failures": 0,
+      "meanStateRmse": 1.117560619715011,
+      "meanMaxAngleDeg": 3.4790362224580615
+    },
+    {
+      "scenario": "glitch",
+      "controller": "lqr",
+      "observer": "kf",
+      "failures": 0,
+      "meanStateRmse": 0.29537685917507384,
+      "meanMaxAngleDeg": 8.200826272046395
+    },
+    {
+      "scenario": "glitch",
+      "controller": "lqr",
+      "observer": "ekf",
+      "failures": 0,
+      "meanStateRmse": 0.29149086706831273,
+      "meanMaxAngleDeg": 8.389543074761187
+    },
+    {
+      "scenario": "glitch",
+      "controller": "lqr",
+      "observer": "so2",
+      "failures": 0,
+      "meanStateRmse": 0.29149086706831273,
+      "meanMaxAngleDeg": 8.389543074761187
+    },
+    {
+      "scenario": "glitch",
+      "controller": "lqr",
+      "observer": "residual",
+      "failures": 0,
+      "meanStateRmse": 0.23280365866004593,
+      "meanMaxAngleDeg": 7.423375337079752
+    },
+    {
+      "scenario": "glitch",
+      "controller": "lqr",
+      "observer": "adaptive",
+      "failures": 0,
+      "meanStateRmse": 0.2138638959615924,
+      "meanMaxAngleDeg": 6.9534625891726245
+    },
+    {
+      "scenario": "glitch",
+      "controller": "mpc",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.010537798195685247,
+      "meanMaxAngleDeg": 5.077060026156046
+    },
+    {
+      "scenario": "glitch",
+      "controller": "mpc",
+      "observer": "raw",
+      "failures": 0,
+      "meanStateRmse": 1.1272388818644177,
+      "meanMaxAngleDeg": 5.043531255060962
+    },
+    {
+      "scenario": "glitch",
+      "controller": "mpc",
+      "observer": "kf",
+      "failures": 2,
+      "meanStateRmse": 0.27431038692294396,
+      "meanMaxAngleDeg": 8.122330917160708
+    },
+    {
+      "scenario": "glitch",
+      "controller": "mpc",
+      "observer": "ekf",
+      "failures": 2,
+      "meanStateRmse": 0.27625754120552576,
+      "meanMaxAngleDeg": 7.8634021707779835
+    },
+    {
+      "scenario": "glitch",
+      "controller": "mpc",
+      "observer": "so2",
+      "failures": 2,
+      "meanStateRmse": 0.27625754120552576,
+      "meanMaxAngleDeg": 7.8634021707779835
+    },
+    {
+      "scenario": "glitch",
+      "controller": "mpc",
+      "observer": "residual",
+      "failures": 4,
+      "meanStateRmse": 0.2779815089129915,
+      "meanMaxAngleDeg": 7.155542079608051
+    },
+    {
+      "scenario": "glitch",
+      "controller": "mpc",
+      "observer": "adaptive",
+      "failures": 4,
+      "meanStateRmse": 0.20254341026967054,
+      "meanMaxAngleDeg": 11.760162949633342
+    },
+    {
+      "scenario": "glitch",
+      "controller": "ppo",
+      "observer": "truth",
+      "failures": 0,
+      "meanStateRmse": 0.1751756438304906,
+      "meanMaxAngleDeg": 0.9094728207864566
+    },
+    {
+      "scenario": "glitch",
+      "controller": "ppo",
+      "observer": "raw",
+      "failures": 5,
+      "meanStateRmse": 1.1345091118666928,
+      "meanMaxAngleDeg": 34.692098648262224
+    },
+    {
+      "scenario": "glitch",
+      "controller": "ppo",
+      "observer": "kf",
+      "failures": 5,
+      "meanStateRmse": 0.33478573794738775,
+      "meanMaxAngleDeg": 37.556420522048846
+    },
+    {
+      "scenario": "glitch",
+      "controller": "ppo",
+      "observer": "ekf",
+      "failures": 5,
+      "meanStateRmse": 0.3324274297405341,
+      "meanMaxAngleDeg": 35.10459632315156
+    },
+    {
+      "scenario": "glitch",
+      "controller": "ppo",
+      "observer": "so2",
+      "failures": 5,
+      "meanStateRmse": 0.3324274297405341,
+      "meanMaxAngleDeg": 35.10459632315156
+    },
+    {
+      "scenario": "glitch",
+      "controller": "ppo",
+      "observer": "residual",
+      "failures": 5,
+      "meanStateRmse": 0.32113927756500876,
+      "meanMaxAngleDeg": 35.541856330554616
+    },
+    {
+      "scenario": "glitch",
+      "controller": "ppo",
+      "observer": "adaptive",
+      "failures": 0,
+      "meanStateRmse": 0.28673537733011656,
+      "meanMaxAngleDeg": 10.6375574347244
+    }
+  ],
+  "residualArtifact": {
+    "baseRmse": 0.11425718830326272,
+    "residualRmse": 0.0655410641620109
+  }
+}

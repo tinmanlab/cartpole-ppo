@@ -1,0 +1,40 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>CartPole Control × Observer Lab</title><style>/* STYLE */</style></head><body>
+<header class="top"><div class="brand"><b>CartPole Control × Observer Lab</b><span>같은 plant, controller와 observer만 교체</span></div><div class="badges"><span class="badge">50 Hz control · 200 Hz physics</span><span class="badge" id="webmcpBadge">WebMCP 확인 중</span></div></header>
+<main>
+<section class="intro"><div><h1>제어기와 관측기를 분리해서 보면 무엇이 달라질까?</h1><p>Truth는 evaluator에만 남기고, controller에는 선택한 observer의 <span class="mono">x̂</span>만 전달합니다. 같은 CartPole plant를 사용합니다.</p></div><div class="legend"><span><i class="sw truth"></i>실제 state</span><span><i class="sw estimate"></i>추정 state</span><span><i class="sw uncert"></i>±2σ</span></div></section>
+<section class="flow" aria-label="control loop">
+ <div class="box"><b>Plant</b><small>x = [p,v,θ,ω]</small></div><div class="arrow">→</div>
+ <div class="box"><b>Sensor</b><small>y = [p,θ] + noise</small></div><div class="arrow">→</div>
+ <div class="box"><b>Observer</b><small>y,u → x̂,P</small></div><div class="arrow">→</div>
+ <div class="box"><b>Controller</b><small>x̂ → force u</small></div><div class="arrow">→</div>
+ <div class="box"><b>Plant</b><small>xₖ₊₁ = f(xₖ,uₖ)</small></div>
+</section>
+<div class="layout">
+ <section class="card">
+  <div class="head"><div><b>실시간 동일 plant 실험</b><small>실선 = truth, 점선 = observer estimate</small></div><span class="badge" id="statusBadge">RUNNING</span></div>
+  <div class="controls">
+   <label>Controller<select id="controller"><option value="pid">PID · cascaded</option><option value="lqr" selected>LQR</option><option value="mpc">MPC · constrained</option><option value="ppo">PPO · 기존 robust actor</option></select></label>
+   <label>Observer<select id="observer"><option value="truth">Truth / oracle</option><option value="raw">Raw sensor + finite diff</option><option value="kf" selected>KF</option><option value="ekf">EKF</option><option value="so2">SO(2) invariant-error bridge</option><option value="residual">Learned residual · InNKF-style</option><option value="adaptive">Adaptive R · CoCo/FOCUS bridge</option></select></label>
+   <label>Scenario<select id="scenario"><option value="nominal" selected>Nominal</option><option value="sensor">Sensor noise ↑</option><option value="model">Model mismatch</option><option value="mixed">Mixed</option><option value="glitch">Position measurement glitch</option></select></label>
+   <label>Goal position<select id="goal"><option value="0" selected>0.0 m</option><option value="0.5">+0.5 m</option><option value="-0.5">−0.5 m</option></select></label>
+  </div>
+  <div class="world-wrap"><canvas class="world" id="world" width="900" height="360"></canvas>
+   <div class="transport"><button class="primary" id="play">일시정지</button><button id="step">1 step</button><button id="reset">Reset</button><button id="pushL">← 3 N push</button><button id="pushR">3 N push →</button><span class="spacer"></span><span class="mono" id="clock">t=0.00 s</span></div>
+   <div class="metrics"><div class="metric"><small>θ truth</small><b id="mTheta">0°</b></div><div class="metric"><small>θ estimate</small><b id="mThetaHat">0°</b></div><div class="metric"><small>state RMSE</small><b id="mRmse">0</b></div><div class="metric"><small>force u</small><b id="mForce">0 N</b></div><div class="metric"><small>innovation</small><b id="mInnov">0</b></div></div>
+  </div>
+  <div class="charts"><div class="chartbox"><b>Angle: truth vs estimate</b><canvas id="angleChart" width="420" height="150"></canvas></div><div class="chartbox"><b>Observer uncertainty: σ(v), σ(ω)</b><canvas id="uncertChart" width="420" height="150"></canvas></div></div>
+ </section>
+ <aside class="right">
+  <section class="card equation"><h3 id="controllerTitle">LQR</h3><p class="why" id="controllerWhy"></p><div class="math" id="controllerMath"></div><div class="take" id="controllerTake"></div></section>
+  <section class="card equation"><h3 id="observerTitle">KF</h3><p class="why" id="observerWhy"></p><div class="math" id="observerMath"></div><div class="take" id="observerTake"></div></section>
+  <section class="card lineage"><div class="head" style="padding:0 0 8px;border:0"><div><b>Humanoid estimator 논문 계보로 연결</b><small>CartPole에서 배운 개념이 어디에 쓰이는지</small></div></div><div class="timeline" id="lineage"></div></section>
+  <section class="card compare"><div class="head" style="padding:0 0 8px;border:0"><div><b>조합 비교</b><small>동일 seed / 동일 push / 6 s, success와 state RMSE</small></div><button id="compare">16+ 조합 실행</button></div><div class="matrix-wrap"><table class="matrix" id="matrix"><tbody><tr><td>비교 실행 전</td></tr></tbody></table></div></section>
+ </aside>
+</div>
+<p class="footer-note">주의: CartPole의 SO(2) 모드는 Hartley의 humanoid InEKF 자체가 아닙니다. 각도 manifold의 invariant-error 직관을 보여주는 bridge입니다. 실제 InEKF의 핵심 무대는 SO(3)/SE₂(3) floating-base state입니다.</p>
+</main>
+<script>/* CORE */</script>
+<script>/* ACTOR */</script>
+<script>/* RESIDUAL */</script>
+<script>/* APP */</script>
+</body></html>

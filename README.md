@@ -56,3 +56,10 @@ Building needs only Python's standard library. Generated HTML entries are distri
 [Hosting and live checks](docs/PAGES.md) · [Earlier engine verification](docs/VERIFICATION.md) · [Contributing](CONTRIBUTING.md) · [Third-party notices](THIRD_PARTY.md)
 
 The hosted acceptance tests check the exact deployed revision, real pointer/key holds, continued inference, cancellation paths, a genuine PPO iteration, language round trips, replay, media playback and working shortcuts. Passing these checks is not a robustness or hardware certification.
+## Control × Observer lab (experimental branch)
+
+A standalone lab reuses the exact CartPole plant while swapping PID/LQR/MPC/PPO controllers and Raw/KF/EKF/SO(2)-bridge/learned-residual/adaptive-R observers. Build it with `python3 src/build_control_lab.py` and see [docs/CONTROL_OBSERVER_LAB.md](docs/CONTROL_OBSERVER_LAB.md) for scope and claim boundaries.
+### Detailed Control × Observer v2
+
+The detailed lab adds controller/observer topic pages on one shared live CartPole view, including a reduced-order centroidal-style MPC and an actual nonlinear receding-horizon NMPC derived from the pinned Figure/WBMPC architecture. Build with python3 src/build_control_lab_v2.py and see docs/CONTROL_OBSERVER_LAB_V2.md for exact claim boundaries.
+
