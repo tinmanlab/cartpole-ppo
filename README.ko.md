@@ -52,3 +52,24 @@ python tools/check_package.py
 [배포와 공개 주소 검사](docs/PAGES.md) · [이전 엔진 검증 기록](docs/VERIFICATION.md) · [기여 방법](CONTRIBUTING.md) · [출처·라이선스](THIRD_PARTY.md)
 
 배포 검사는 실제 공개 주소의 파일 해시, 누름·해제, 추론 지속, 중단 사유, 언어 전환, PPO 한 iteration, 리플레이·영상·바로가기를 확인합니다. 이는 모든 외란에 대한 성공이나 실물 안전 인증을 뜻하지 않습니다.
+## Control × Observer 학습장 (실험 브랜치)
+
+같은 CartPole plant에서 PID/LQR/MPC/PPO와 Raw/KF/EKF/SO(2)-bridge/learned-residual/adaptive-R observer를 교체해 비교하는 별도 학습장이 추가되었습니다.
+
+```bash
+python3 src/build_control_lab.py
+node tests/test_control_lab.js
+python3 tests/test_control_lab_browser.py
+python3 -m http.server 8765 --bind 0.0.0.0
+```
+
+브라우저에서 `http://localhost:8765/control-observer-lab.html`을 엽니다. 수학적 경계와 Hartley→Lin→Youm→InNKF→CoCo→FOCUS 연결은 [docs/CONTROL_OBSERVER_LAB.md](docs/CONTROL_OBSERVER_LAB.md)에 정리했습니다.
+### 상세 Control × Observer v2
+
+Figure의 pinned centroidal/full-order NMPC 구조를 직접 읽고 CartPole에 대응시킨 상세 학습장을 추가했습니다. 공통 live simulation/graph를 유지한 채 PID, LQR, Linear MPC, Centroidal-style MPC, Full nonlinear NMPC, PPO와 observer/hybrid 계보를 topic별로 설명합니다.
+
+    python3 src/build_control_lab_v2.py
+    node tests/test_control_lab_v2.js
+    python3 tests/test_control_lab_v2_browser.py
+
+결과물은 control-observer-lab-v2.html이며 상세 경계는 docs/CONTROL_OBSERVER_LAB_V2.md를 참조합니다.
