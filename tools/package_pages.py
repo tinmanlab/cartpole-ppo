@@ -7,7 +7,7 @@ import re
 import shutil
 
 ROOT = Path(__file__).resolve().parents[1]
-FILES = ('index.html', 'viewer.ko.html', 'README.md', 'README.ko.md', 'LICENSE', 'THIRD_PARTY.md')
+FILES = ('index.html', 'viewer.ko.html', 'control-observer-lab.html', 'control-observer-lab-v2.html', 'README.md', 'README.ko.md', 'LICENSE', 'THIRD_PARTY.md')
 DIRECTORIES = ('docs', 'archive', 'licenses')
 
 

@@ -73,4 +73,3 @@ Figure의 pinned centroidal/full-order NMPC 구조를 직접 읽고 CartPole에 
     python3 tests/test_control_lab_v2_browser.py
 
 결과물은 control-observer-lab-v2.html이며 상세 경계는 docs/CONTROL_OBSERVER_LAB_V2.md를 참조합니다.
-

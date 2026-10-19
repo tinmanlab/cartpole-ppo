@@ -1,4 +1,5 @@
 'use strict';
+
 const CONTROL_LAB_TOPICS = {
  overview:{group:"개요",title:"Controller와 Observer를 한 시스템으로 읽기",lead:"Controller는 무슨 힘을 낼지, Observer는 지금 상태가 무엇인지 푼다. 둘은 직렬 연결되므로 좋은 controller도 나쁜 state estimate 위에서는 무너질 수 있다.",chips:["same plant","same sensor contract","truth = evaluator only"],runtime:null,body:[
   "<div class='section'><h3>먼저 분리한다</h3><div class='math'>Plant:      x(k+1) = f(x(k),u(k))\\nSensor:     y(k) = h(x(k)) + noise\\nObserver:   (y,u) -> x_hat, P\\nController: x_hat -> u</div><div class='take'>plant를 고정하고 controller 또는 observer 하나만 바꾸는 것이 이 lab의 비교 규칙이다.</div></div>",
@@ -73,5 +74,7 @@ const CONTROL_LAB_TOPICS = {
   "<div class='section'><h3>CartPole 한계</h3><p>foot FK가 없으므로 FOCUS를 복제할 수 없다. 현재 mode는 reliability -> R -> K -> correction 구조만 대응한다.</p></div>"
  ].join("")}
 };
+
 const CONTROL_LAB_TOPIC_ORDER=["overview","pid","lqr","linear_mpc","centroidal_mpc","full_nmpc","ppo","raw","kf","ekf","inekf","lin","youm","innkf","coco","focus"];
+
 if(typeof module!=="undefined")module.exports={CONTROL_LAB_TOPICS,CONTROL_LAB_TOPIC_ORDER};

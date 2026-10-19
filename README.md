@@ -62,4 +62,3 @@ A standalone lab reuses the exact CartPole plant while swapping PID/LQR/MPC/PPO 
 ### Detailed Control × Observer v2
 
 The detailed lab adds controller/observer topic pages on one shared live CartPole view, including a reduced-order centroidal-style MPC and an actual nonlinear receding-horizon NMPC derived from the pinned Figure/WBMPC architecture. Build with python3 src/build_control_lab_v2.py and see docs/CONTROL_OBSERVER_LAB_V2.md for exact claim boundaries.
-

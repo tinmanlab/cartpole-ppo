@@ -24,6 +24,12 @@ jobs:
         with:
           python-version: '3.13'
       - run: node tools/test.js
+      - run: node tests/test_control_lab.js && node tests/test_control_lab_v2.js
+      - name: Check standalone control-lab builds
+        run: |
+          python src/build_control_lab.py
+          python src/build_control_lab_v2.py
+          git diff --exit-code -- control-observer-lab.html control-observer-lab-v2.html
       - name: Build both standalone language entries from canonical source
         run: python src/build.py
       - run: python src/build.py --check
@@ -34,6 +40,7 @@ jobs:
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m playwright install --with-deps chromium
       - run: google-chrome --version
+      - run: python tests/test_control_lab_browser.py && python tests/test_control_lab_v2_browser.py
       - name: Verify actual HTTP navigation, held-tip input, and Robust PPO v2
         shell: bash
         run: |
